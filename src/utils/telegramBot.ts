@@ -279,9 +279,8 @@ function setupBotHandlers(bot: Telegraf) {
 
         await ctx.editMessageText('📤 _Uploading result to Telegram..._', { parse_mode: 'Markdown' });
 
-        // Transparency: send as document to avoid compression and loss of alpha channel
-        const isTransparent = background === 'transparent';
-        const sendAsDocument = isTransparent || ('document' in replyMessage);
+        // Force all output images to be sent as document files
+        const sendAsDocument = true;
 
         if (sendAsDocument) {
           await ctx.replyWithDocument(
