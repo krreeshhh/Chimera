@@ -26,6 +26,9 @@ export default function Home() {
   const [dragStart, setDragStart] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
   const [boxStart, setBoxStart] = useState<{ x: number; y: number; w: number; h: number }>({ x: 0, y: 0, w: 100, h: 100 });
 
+  // Sidebar visibility
+  const [showSettings, setShowSettings] = useState<boolean>(false);
+
   const [processing, setProcessing] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [outputUrl, setOutputUrl] = useState<string | null>(null);
@@ -148,12 +151,13 @@ export default function Home() {
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+    if (e) e.preventDefault();
     if (!file) return;
 
     setProcessing(true);
     setError(null);
     setOutputUrl(null);
+    setShowSettings(false); // Close settings panel on run to expose output
 
     const formData = new FormData();
     formData.append('image', file);
@@ -202,9 +206,213 @@ export default function Home() {
 
   return (
     <div className="container">
+      {/* Settings Sidebar Backdrop */}
+      <div 
+        className={`sidebar-backdrop ${showSettings ? 'active' : ''}`}
+        onClick={() => setShowSettings(false)}
+      />
+
+      {/* Settings Sidebar Panel */}
+      <aside className={`sidebar ${showSettings ? 'active' : ''}`}>
+        <div className="sidebar-header">
+          <h3 style={{ fontFamily: 'var(--font-mono)', fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            ⚙️ System parameters
+          </h3>
+          <button 
+            type="button" 
+            className="sidebar-close-btn"
+            onClick={() => setShowSettings(false)}
+          >
+            ✕
+          </button>
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem', flexGrow: 1 }}>
+          <div className="form-group">
+            <label htmlFor="operation">Image Operation</label>
+            <select 
+              id="operation"
+              className="select-control"
+              value={operation}
+              onChange={(e) => setOperation(e.target.value as OperationType)}
+              disabled={processing || !file}
+            >
+              <option value="convert-and-remove-background">Convert + Remove BG</option>
+              <option value="remove-background">Remove Background Only</option>
+              <option value="convert">Convert Format Only</option>
+            </select>
+          </div>
+
+          {(operation === 'remove-background' || operation === 'convert-and-remove-background') && (
+            <div className="form-group">
+              <label htmlFor="background">Background Fill</label>
+              <select 
+                id="background"
+                className="select-control"
+                value={background}
+                onChange={(e) => setBackground(e.target.value)}
+                disabled={processing || !file}
+              >
+                <option value="transparent">Transparent alpha</option>
+                <option value="white">Solid White</option>
+                <option value="black">Solid Black</option>
+                <option value="#ff0000">Chroma Red</option>
+                <option value="#00ff00">Chroma Green</option>
+                <option value="#0000ff">Chroma Blue</option>
+              </select>
+            </div>
+          )}
+
+          {(operation === 'convert' || operation === 'convert-and-remove-background') && (
+            <>
+              <div className="form-group">
+                <label htmlFor="format">Output Format</label>
+                <select 
+                  id="format"
+                  className="select-control"
+                  value={format}
+                  onChange={(e) => setFormat(e.target.value)}
+                  disabled={processing || !file}
+                >
+                  <option value="webp">WebP (Compressed)</option>
+                  <option value="png">PNG (Lossless)</option>
+                  <option value="jpeg">JPEG (Solid)</option>
+                  <option value="avif">AVIF (Ultra)</option>
+                </select>
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="quality">Quality Factor</label>
+                <div className="slider-container">
+                  <input 
+                    id="quality"
+                    type="range" 
+                    min="1" 
+                    max="100" 
+                    value={quality}
+                    onChange={(e) => setQuality(parseInt(e.target.value, 10))}
+                    className="slider-control"
+                    disabled={processing || !file}
+                  />
+                  <span className="slider-val">{quality}%</span>
+                </div>
+              </div>
+            </>
+          )}
+
+          <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '1.5rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.5rem' }}>
+              <input 
+                type="checkbox" 
+                id="enableCrop" 
+                checked={enableCrop} 
+                onChange={(e) => setEnableCrop(e.target.checked)} 
+                disabled={processing || !file}
+                style={{ width: '1.1rem', height: '1.1rem', cursor: 'pointer', accentColor: 'var(--text-primary)' }}
+              />
+              <label htmlFor="enableCrop" style={{ fontFamily: 'var(--font-mono)', fontSize: '0.82rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', cursor: 'pointer' }}>
+                Enable Extraction (Crop)
+              </label>
+            </div>
+
+            {enableCrop && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                  <div className="form-group">
+                    <label htmlFor="cropX">Left Offset (X)</label>
+                    <input 
+                      type="number" 
+                      id="cropX" 
+                      className="input-control" 
+                      value={cropX} 
+                      onChange={(e) => {
+                        const val = Math.min(Math.max(0, naturalWidth - 1), Math.max(0, parseInt(e.target.value, 10) || 0));
+                        setCropX(val);
+                        if (val + cropWidth > naturalWidth) {
+                          setCropWidth(naturalWidth - val);
+                        }
+                      }}
+                      disabled={processing}
+                      min="0"
+                      max={Math.max(0, naturalWidth - 1)}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label htmlFor="cropY">Top Offset (Y)</label>
+                    <input 
+                      type="number" 
+                      id="cropY" 
+                      className="input-control" 
+                      value={cropY} 
+                      onChange={(e) => {
+                        const val = Math.min(Math.max(0, naturalHeight - 1), Math.max(0, parseInt(e.target.value, 10) || 0));
+                        setCropY(val);
+                        if (val + cropHeight > naturalHeight) {
+                          setCropHeight(naturalHeight - val);
+                        }
+                      }}
+                      disabled={processing}
+                      min="0"
+                      max={Math.max(0, naturalHeight - 1)}
+                    />
+                  </div>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                  <div className="form-group">
+                    <label htmlFor="cropWidth">Width (px)</label>
+                    <input 
+                      type="number" 
+                      id="cropWidth" 
+                      className="input-control" 
+                      value={cropWidth} 
+                      onChange={(e) => {
+                        const maxW = Math.max(1, naturalWidth - cropX);
+                        const val = Math.min(maxW, Math.max(1, parseInt(e.target.value, 10) || 1));
+                        setCropWidth(val);
+                      }}
+                      disabled={processing}
+                      min="1"
+                      max={Math.max(1, naturalWidth - cropX)}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label htmlFor="cropHeight">Height (px)</label>
+                    <input 
+                      type="number" 
+                      id="cropHeight" 
+                      className="input-control" 
+                      value={cropHeight} 
+                      onChange={(e) => {
+                        const maxH = Math.max(1, naturalHeight - cropY);
+                        const val = Math.min(maxH, Math.max(1, parseInt(e.target.value, 10) || 1));
+                        setCropHeight(val);
+                      }}
+                      disabled={processing}
+                      min="1"
+                      max={Math.max(1, naturalHeight - cropY)}
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <button 
+            type="button" 
+            className="btn btn-primary" 
+            onClick={handleSubmit}
+            disabled={processing || !file}
+            style={{ marginTop: 'auto' }}
+          >
+            RUN PIPELINE
+          </button>
+        </div>
+      </aside>
+
       <header>
         <div className="logo-container">
           <h1 className="logo-text">chimera.</h1>
+          <span className="logo-badge">Local Engine</span>
         </div>
         <p className="tagline">
           An industrial, stateless background-removal & format-conversion system.
@@ -212,13 +420,41 @@ export default function Home() {
         </p>
       </header>
 
+      {/* Main Action Bar */}
+      <div className="toolbar-container">
+        <h2 style={{ fontFamily: 'var(--font-mono)', fontSize: '0.85rem', textTransform: 'uppercase', color: 'var(--text-secondary)', letterSpacing: '0.05em' }}>
+          Interactive Workbench
+        </h2>
+        {file && (
+          <div style={{ display: 'flex', gap: '1rem' }}>
+            <button 
+              type="button" 
+              onClick={() => setShowSettings(true)} 
+              className="settings-toggle-btn"
+            >
+              ⚙️ CONFIG PARAMETERS
+            </button>
+            <button 
+              type="button" 
+              onClick={handleSubmit} 
+              className="settings-toggle-btn" 
+              style={{ backgroundColor: 'var(--text-primary)', color: 'var(--bg-primary)', fontWeight: '700' }}
+              disabled={processing}
+            >
+              🚀 RUN PIPELINE
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* 2-Column Desktop Grid Layout */}
       <div className="step-container">
-        {/* Step 1: Upload */}
+        {/* Left Column: Source Preview with Draggable Cropper */}
         <section className="step-block">
           <div className="step-number">01</div>
           <div className="step-header">
-            <h2 className="step-title">Source Image</h2>
-            <p className="step-description">Provide the input image you wish to segment or convert.</p>
+            <h2 className="step-title">Source Preview</h2>
+            <p className="step-description">Upload image and drag overlays to extract regions of interest.</p>
           </div>
 
           {!previewUrl ? (
@@ -231,7 +467,7 @@ export default function Home() {
               onClick={() => fileInputRef.current?.click()}
             >
               <div className="dropzone-icon">🗂️</div>
-              <p className="dropzone-text">Drag files here or click to browse raw directories</p>
+              <p className="dropzone-text">Drag files here or click to browse directories</p>
               <p className="dropzone-hint">Limits: Max 20MB. Formats: JPEG, PNG, WebP, AVIF, BMP, TIFF</p>
               <input 
                 type="file" 
@@ -264,6 +500,7 @@ export default function Home() {
                   bottom: 0,
                   overflow: 'hidden'
                 }}>
+                  {/* Draggable/Resizable Crop Highlight overlay */}
                   <div 
                     onPointerDown={(e) => handlePointerDown(e, 'drag')}
                     style={{
@@ -308,203 +545,9 @@ export default function Home() {
           )}
         </section>
 
-        {/* Step 2: Configuration */}
-        <section className="step-block" style={{ opacity: file ? 1 : 0.45, transition: 'opacity 0.2s ease' }}>
-          <div className="step-number">02</div>
-          <div className="step-header">
-            <h2 className="step-title">Configuration Parameters</h2>
-            <p className="step-description">Select output specifications and run execution.</p>
-          </div>
-
-          <form onSubmit={handleSubmit}>
-            <div className="options-grid" style={{ pointerEvents: file ? 'auto' : 'none' }}>
-              <div className="form-group">
-                <label htmlFor="operation">Image Operation</label>
-                <select 
-                  id="operation"
-                  className="select-control"
-                  value={operation}
-                  onChange={(e) => setOperation(e.target.value as OperationType)}
-                  disabled={processing || !file}
-                >
-                  <option value="convert-and-remove-background">Convert + Remove Background</option>
-                  <option value="remove-background">Remove Background Only</option>
-                  <option value="convert">Convert Format Only</option>
-                </select>
-              </div>
-
-              {(operation === 'remove-background' || operation === 'convert-and-remove-background') && (
-                <div className="form-group">
-                  <label htmlFor="background">Background Fill</label>
-                  <select 
-                    id="background"
-                    className="select-control"
-                    value={background}
-                    onChange={(e) => setBackground(e.target.value)}
-                    disabled={processing || !file}
-                  >
-                    <option value="transparent">Transparent alpha channel (PNG/WebP/AVIF)</option>
-                    <option value="white">Solid White (#FFFFFF)</option>
-                    <option value="black">Solid Black (#000000)</option>
-                    <option value="#ff0000">Chroma Red (#FF0000)</option>
-                    <option value="#00ff00">Chroma Green (#00FF00)</option>
-                    <option value="#0000ff">Chroma Blue (#0000FF)</option>
-                  </select>
-                </div>
-              )}
-
-              {(operation === 'convert' || operation === 'convert-and-remove-background') && (
-                <>
-                  <div className="form-group">
-                    <label htmlFor="format">Output Format</label>
-                    <select 
-                      id="format"
-                      className="select-control"
-                      value={format}
-                      onChange={(e) => setFormat(e.target.value)}
-                      disabled={processing || !file}
-                    >
-                      <option value="webp">WebP (Optimized Lossy/Lossless)</option>
-                      <option value="png">PNG (Lossless Alpha)</option>
-                      <option value="jpeg">JPEG (Compressed Solid)</option>
-                      <option value="avif">AVIF (Ultra High Compression)</option>
-                    </select>
-                  </div>
-
-                  <div className="form-group">
-                    <label htmlFor="quality">Target Quality Factor</label>
-                    <div className="slider-container">
-                      <input 
-                        id="quality"
-                        type="range" 
-                        min="1" 
-                        max="100" 
-                        value={quality}
-                        onChange={(e) => setQuality(parseInt(e.target.value, 10))}
-                        className="slider-control"
-                        disabled={processing || !file}
-                      />
-                      <span className="slider-val">{quality}%</span>
-                    </div>
-                  </div>
-                </>
-              )}
-            </div>
-
-            {/* Cropping Options Panel */}
-            <div style={{ marginTop: '2rem', paddingTop: '1.5rem', borderTop: '1px solid var(--border-color)', pointerEvents: file ? 'auto' : 'none' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.5rem' }}>
-                <input 
-                  type="checkbox" 
-                  id="enableCrop" 
-                  checked={enableCrop} 
-                  onChange={(e) => setEnableCrop(e.target.checked)} 
-                  disabled={processing || !file}
-                  style={{ width: '1.1rem', height: '1.1rem', cursor: 'pointer', accentColor: 'var(--text-primary)' }}
-                />
-                <label htmlFor="enableCrop" style={{ fontFamily: 'var(--font-mono)', fontSize: '0.88rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', cursor: 'pointer' }}>
-                  Enable Image Extraction (Crop)
-                </label>
-              </div>
-
-              {enableCrop && (
-                <div className="options-grid" style={{ gap: '1.5rem' }}>
-                  <div className="form-group">
-                    <label htmlFor="cropX">Crop Left Offset (X - px)</label>
-                    <input 
-                      type="number" 
-                      id="cropX" 
-                      className="input-control" 
-                      value={cropX} 
-                      onChange={(e) => {
-                        const val = Math.min(Math.max(0, naturalWidth - 1), Math.max(0, parseInt(e.target.value, 10) || 0));
-                        setCropX(val);
-                        if (val + cropWidth > naturalWidth) {
-                          setCropWidth(naturalWidth - val);
-                        }
-                      }}
-                      disabled={processing}
-                      min="0"
-                      max={Math.max(0, naturalWidth - 1)}
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label htmlFor="cropY">Crop Top Offset (Y - px)</label>
-                    <input 
-                      type="number" 
-                      id="cropY" 
-                      className="input-control" 
-                      value={cropY} 
-                      onChange={(e) => {
-                        const val = Math.min(Math.max(0, naturalHeight - 1), Math.max(0, parseInt(e.target.value, 10) || 0));
-                        setCropY(val);
-                        if (val + cropHeight > naturalHeight) {
-                          setCropHeight(naturalHeight - val);
-                        }
-                      }}
-                      disabled={processing}
-                      min="0"
-                      max={Math.max(0, naturalHeight - 1)}
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label htmlFor="cropWidth">Crop Width (px)</label>
-                    <input 
-                      type="number" 
-                      id="cropWidth" 
-                      className="input-control" 
-                      value={cropWidth} 
-                      onChange={(e) => {
-                        const maxW = Math.max(1, naturalWidth - cropX);
-                        const val = Math.min(maxW, Math.max(1, parseInt(e.target.value, 10) || 1));
-                        setCropWidth(val);
-                      }}
-                      disabled={processing}
-                      min="1"
-                      max={Math.max(1, naturalWidth - cropX)}
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label htmlFor="cropHeight">Crop Height (px)</label>
-                    <input 
-                      type="number" 
-                      id="cropHeight" 
-                      className="input-control" 
-                      value={cropHeight} 
-                      onChange={(e) => {
-                        const maxH = Math.max(1, naturalHeight - cropY);
-                        const val = Math.min(maxH, Math.max(1, parseInt(e.target.value, 10) || 1));
-                        setCropHeight(val);
-                      }}
-                      disabled={processing}
-                      min="1"
-                      max={Math.max(1, naturalHeight - cropY)}
-                    />
-                  </div>
-                </div>
-              )}
-            </div>
-
-            <button               type="submit" 
-              className="btn btn-primary" 
-              disabled={processing || !file}
-              style={{ marginTop: '2rem' }}
-            >
-              {processing ? (
-                <>
-                  <span className="loader"></span>
-                  <span>EXECUTING SEGMENTATION RUN...</span>
-                </>
-              ) : (
-                <span>RUN PIPELINE</span>
-              )}
-            </button>
-          </form>
-        </section>
-
-        {/* Step 3: Result Output */}
+        {/* Right Column: Processing Output */}
         <section className="step-block" style={{ opacity: outputUrl || processing ? 1 : 0.45, transition: 'opacity 0.2s ease', minHeight: '300px' }}>
-          <div className="step-number">03</div>
+          <div className="step-number">02</div>
           <div className="step-header">
             <h2 className="step-title">Processing Output</h2>
             <p className="step-description">Examine segmented results and download output buffers.</p>
@@ -514,7 +557,7 @@ export default function Home() {
             <div className="scrim-overlay">
               <span className="loader"></span>
               <p style={{ fontFamily: 'var(--font-mono)', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-                [inference] loading RMBG-1.4 weights onto CPU runtime...
+                [inference] running local segmenter model on CPU ...
               </p>
             </div>
           )}
@@ -529,7 +572,7 @@ export default function Home() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
               <div className="preview-container checkerboard">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={outputUrl} alt="Output" className="preview-image" />
+                <img src={outputUrl} alt="Output" className="preview-image" style={{ width: '100%', height: 'auto', display: 'block' }} />
                 <div className="preview-details">
                   <span>OUT SIZE: {outputSize}</span>
                   <a href={outputUrl} download={`chimera_${Date.now()}.${format}`} style={{ color: 'var(--text-primary)', textDecoration: 'underline', fontWeight: '700' }}>
@@ -543,8 +586,8 @@ export default function Home() {
             </div>
           ) : (
             !processing && (
-              <div style={{ border: '1px dashed var(--border-color)', height: '200px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', textAlign: 'center', fontSize: '0.88rem', fontFamily: 'var(--font-mono)' }}>
-                <span>[AWAITING STEP 02 PIPELINE RUN]</span>
+              <div style={{ border: '1px dashed var(--border-color)', height: '250px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', textAlign: 'center', fontSize: '0.88rem', fontFamily: 'var(--font-mono)' }}>
+                <span>[AWAITING PIPELINE RUN]</span>
               </div>
             )
           )}
