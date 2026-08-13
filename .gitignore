@@ -37,3 +37,6 @@ yarn-error.log*
 # transformers cache
 .cache/
 /tmp/
+
+.vercel
+.env*

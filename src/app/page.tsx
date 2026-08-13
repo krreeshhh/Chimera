@@ -14,7 +14,6 @@ export default function Home() {
   
   const [processing, setProcessing] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<boolean>(false);
   const [outputUrl, setOutputUrl] = useState<string | null>(null);
   const [outputSize, setOutputSize] = useState<string>('');
   const [activeTab, setActiveTab] = useState<string>('api');
@@ -28,7 +27,6 @@ export default function Home() {
       setFile(selectedFile);
       setPreviewUrl(URL.createObjectURL(selectedFile));
       setOutputUrl(null);
-      setSuccess(false);
       setError(null);
     }
   };
@@ -53,7 +51,6 @@ export default function Home() {
         setFile(droppedFile);
         setPreviewUrl(URL.createObjectURL(droppedFile));
         setOutputUrl(null);
-        setSuccess(false);
         setError(null);
       } else {
         setError('Only image files are supported.');
@@ -65,7 +62,6 @@ export default function Home() {
     setFile(null);
     setPreviewUrl(null);
     setOutputUrl(null);
-    setSuccess(false);
     setError(null);
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
@@ -79,7 +75,6 @@ export default function Home() {
     setProcessing(true);
     setError(null);
     setOutputUrl(null);
-    setSuccess(false);
 
     const formData = new FormData();
     formData.append('image', file);
@@ -108,9 +103,7 @@ export default function Home() {
       const blob = await response.blob();
       const url = URL.createObjectURL(blob);
       setOutputUrl(url);
-      setSuccess(true);
       
-      // Calculate output size
       const sizeKb = (blob.size / 1024).toFixed(1);
       setOutputSize(`${sizeKb} KB`);
     } catch (err: any) {
@@ -256,7 +249,7 @@ export default function Home() {
                 {processing ? (
                   <>
                     <span className="loader"></span>
-                    <span>Processing with AI Model...</span>
+                    <span>Processing with AI...</span>
                   </>
                 ) : (
                   <span>✨ Process Image</span>
@@ -266,12 +259,23 @@ export default function Home() {
           </form>
         </section>
 
-        {/* Right Side: Result Output */}
-        <section className="card">
+        {/* Right Side: Result Output (with loading scrim overlay) */}
+        <section className="card" style={{ position: 'relative', minHeight: '400px' }}>
           <h2 className="card-title">🎯 Processed Output</h2>
           
+          {/* Tactile Material Scrim Overlay */}
+          {processing && (
+            <div className="scrim-overlay">
+              <span className="loader"></span>
+              <p style={{ fontWeight: '700', letterSpacing: '-0.02rem', color: '#fff', fontSize: '1.15rem' }}>Executing Segmentation Inference...</p>
+              <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', maxWidth: '240px', textAlign: 'center', lineHeight: '1.4' }}>
+                Quantized RMBG-1.4 runs in 3-5 seconds on serverless CPU.
+              </p>
+            </div>
+          )}
+          
           {error && (
-            <div style={{ color: 'var(--error)', backgroundColor: 'rgba(239, 68, 68, 0.1)', padding: '1rem', borderRadius: '6px', border: '1px solid var(--error)', marginBottom: '1.5rem' }}>
+            <div style={{ color: 'var(--error)', backgroundColor: 'rgba(239, 68, 68, 0.08)', padding: '1rem 1.25rem', borderRadius: '10px', border: '1px solid rgba(239, 68, 68, 0.2)', marginBottom: '1.5rem', fontSize: '0.95rem' }}>
               <strong>Error:</strong> {error}
             </div>
           )}
@@ -283,18 +287,19 @@ export default function Home() {
                 <img src={outputUrl} alt="Output" className="preview-image" />
                 <div className="preview-details">
                   <span>Size: {outputSize}</span>
-                  <a href={outputUrl} download={`chimera_${Date.now()}.${format}`} style={{ color: 'var(--accent-primary)', textDecoration: 'none', fontWeight: '600' }}>
+                  <a href={outputUrl} download={`chimera_${Date.now()}.${format}`} style={{ color: 'var(--accent-primary)', textDecoration: 'none', fontWeight: '700' }}>
                     Download Image 📥
                   </a>
                 </div>
               </div>
               <div className="success-banner">
-                🚀 Image processed locally using RMBG-1.4 AI model!
+                🚀 Background successfully removed locally using BRIA RMBG-1.4!
               </div>
             </div>
           ) : (
-            <div style={{ border: '2px dashed var(--border-color)', borderRadius: '10px', height: '300px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>
-              <span>📤 Upload an image and click Process to see results</span>
+            <div style={{ border: '2px dashed rgba(255, 255, 255, 0.08)', borderRadius: '12px', height: '300px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)', textAlign: 'center', padding: '1.5rem' }}>
+              <span style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>📤</span>
+              <span style={{ fontSize: '0.95rem', fontWeight: '500' }}>Upload your image and click "Process Image" to initiate AI segmentation.</span>
             </div>
           )}
         </section>
@@ -302,7 +307,7 @@ export default function Home() {
 
       {/* Developer API & Architecture Docs */}
       <section className="dev-section">
-        <h2 className="dev-title">🛠️ Developer Resources & Documentation</h2>
+        <h2 className="dev-title">🛠️ Developer Resources</h2>
         
         <div className="tabs-header">
           <button 
@@ -327,23 +332,23 @@ export default function Home() {
 
         {/* Tab 1: HTTP API */}
         <div className={`tab-content ${activeTab === 'api' ? 'active' : ''}`}>
-          <h3 style={{ marginBottom: '1rem' }}>HTTP REST Endpoints</h3>
+          <h3 style={{ marginBottom: '1rem', letterSpacing: '-0.02em' }}>REST API Endpoints</h3>
           <p style={{ color: 'var(--text-secondary)', marginBottom: '1.5rem' }}>
             Chimera exposes fully stateless POST endpoints for integration in other services.
           </p>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.75rem' }}>
             <div>
-              <h4 style={{ color: 'var(--accent-primary)', marginBottom: '0.5rem' }}>1. Service Health: <code>GET /api/health</code></h4>
+              <h4 style={{ color: 'var(--accent-primary)', marginBottom: '0.5rem', fontWeight: '600' }}>1. Service Health: <code>GET /api/health</code></h4>
               <pre>
-{`curl -X GET https://your-domain.vercel.app/api/health`}
+{`curl -X GET https://chimerraa.vercel.app/api/health`}
               </pre>
             </div>
 
             <div>
-              <h4 style={{ color: 'var(--accent-primary)', marginBottom: '0.5rem' }}>2. Convert Format: <code>POST /api/convert</code></h4>
+              <h4 style={{ color: 'var(--accent-primary)', marginBottom: '0.5rem', fontWeight: '600' }}>2. Convert Format: <code>POST /api/convert</code></h4>
               <pre>
-{`curl -X POST https://your-domain.vercel.app/api/convert \\
+{`curl -X POST https://chimerraa.vercel.app/api/convert \\
   -F "image=@photo.jpg" \\
   -F "format=webp" \\
   -F "quality=85"`}
@@ -351,18 +356,18 @@ export default function Home() {
             </div>
 
             <div>
-              <h4 style={{ color: 'var(--accent-primary)', marginBottom: '0.5rem' }}>3. Remove Background: <code>POST /api/remove-background</code></h4>
+              <h4 style={{ color: 'var(--accent-primary)', marginBottom: '0.5rem', fontWeight: '600' }}>3. Remove Background: <code>POST /api/remove-background</code></h4>
               <pre>
-{`curl -X POST https://your-domain.vercel.app/api/remove-background \\
+{`curl -X POST https://chimerraa.vercel.app/api/remove-background \\
   -F "image=@photo.jpg" \\
   -F "background=transparent"`}
               </pre>
             </div>
 
             <div>
-              <h4 style={{ color: 'var(--accent-primary)', marginBottom: '0.5rem' }}>4. Combined Processing: <code>POST /api/process</code></h4>
+              <h4 style={{ color: 'var(--accent-primary)', marginBottom: '0.5rem', fontWeight: '600' }}>4. Combined Processing: <code>POST /api/process</code></h4>
               <pre>
-{`curl -X POST https://your-domain.vercel.app/api/process \\
+{`curl -X POST https://chimerraa.vercel.app/api/process \\
   -F "image=@photo.jpg" \\
   -F "operation=convert-and-remove-background" \\
   -F "format=png" \\
@@ -374,13 +379,13 @@ export default function Home() {
 
         {/* Tab 2: Telegram Bot */}
         <div className={`tab-content ${activeTab === 'telegram' ? 'active' : ''}`}>
-          <h3 style={{ marginBottom: '1rem' }}>Telegram Webhook Setup</h3>
+          <h3 style={{ marginBottom: '1rem', letterSpacing: '-0.02em' }}>Telegram Webhook Setup</h3>
           <p style={{ color: 'var(--text-secondary)', marginBottom: '1rem' }}>
             The bot processes images via webhook triggers in production.
           </p>
           <ol style={{ marginLeft: '1.5rem', color: 'var(--text-secondary)', display: 'flex', flexDirection: 'column', gap: '0.75rem', marginBottom: '2rem' }}>
             <li>
-              Create a bot by messaging <a href="https://t.me/BotFather" target="_blank" rel="noreferrer" style={{ color: 'var(--accent-primary)' }}>@BotFather</a> on Telegram to obtain your <code>TELEGRAM_BOT_TOKEN</code>.
+              Create a bot by messaging <a href="https://t.me/BotFather" target="_blank" rel="noreferrer" style={{ color: 'var(--accent-primary)', fontWeight: '600' }}>@BotFather</a> on Telegram to obtain your <code>TELEGRAM_BOT_TOKEN</code>.
             </li>
             <li>
               Deploy this project to Vercel and retrieve your production domain.
@@ -390,12 +395,12 @@ export default function Home() {
               <pre style={{ marginTop: '0.5rem' }}>
 {`curl -X POST "https://api.telegram.org/bot<TELEGRAM_BOT_TOKEN>/setWebhook" \\
   -H "Content-Type: application/json" \\
-  -d '{"url": "https://your-domain.vercel.app/api/telegram/webhook", "secret_token": "<TELEGRAM_WEBHOOK_SECRET>"}'`}
+  -d '{"url": "https://chimerraa.vercel.app/api/telegram/webhook", "secret_token": "<TELEGRAM_WEBHOOK_SECRET>"}'`}
               </pre>
             </li>
           </ol>
 
-          <h4 style={{ marginBottom: '0.5rem' }}>Bot Commands & Interface</h4>
+          <h4 style={{ marginBottom: '0.5rem', fontWeight: '600' }}>Bot Commands & Interface</h4>
           <ul style={{ marginLeft: '1.5rem', color: 'var(--text-secondary)', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
             <li><code>/start</code>: Greets the user and lists capability details.</li>
             <li><strong>Send Image/File</strong>: Returns an interactive inline keyboard menu to trigger actions.</li>
@@ -404,7 +409,7 @@ export default function Home() {
 
         {/* Tab 3: Architecture */}
         <div className={`tab-content ${activeTab === 'arch' ? 'active' : ''}`}>
-          <h3 style={{ marginBottom: '1rem' }}>Stateless AI Infrastructure</h3>
+          <h3 style={{ marginBottom: '1rem', letterSpacing: '-0.02em' }}>Stateless AI Infrastructure</h3>
           <p style={{ color: 'var(--text-secondary)', marginBottom: '1.5rem' }}>
             Chimera is built to run fully state-free. AI inference is performed serverless at runtime.
           </p>
@@ -421,7 +426,7 @@ export default function Home() {
             <div className="flow-step">📦 Output PNG/WebP Buffer return</div>
           </div>
 
-          <h4 style={{ marginTop: '1.5rem', marginBottom: '0.5rem' }}>Core Attributes</h4>
+          <h4 style={{ marginTop: '1.5rem', marginBottom: '0.5rem', fontWeight: '600' }}>Core Attributes</h4>
           <ul style={{ marginLeft: '1.5rem', color: 'var(--text-secondary)', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
             <li><strong>EPHEMERAL RUNTIME</strong>: Uses local server memory and the <code>/tmp</code> scratch folder. Warm instances cache the loaded ONNX model, leading to fast subsequent inference.</li>
             <li><strong>ISOLATED INTERFACES</strong>: Image processing is decoupled from the controller layer in <code>src/services/imageProcessor.ts</code>. You can easily migrate the AI engine to a dedicated VM/Worker without changing your API or Telegram handlers.</li>
