@@ -93,16 +93,23 @@ header {
 
 /* Stepper Layout (Wizard flow) */
 .step-container {
-  display: flex;
-  flex-direction: column;
-  gap: 3.5rem;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 2.5rem;
+  align-items: start;
+}
+
+@media (min-width: 1024px) {
+  .step-container {
+    grid-template-columns: 1fr 1fr 1fr;
+  }
 }
 
 .step-block {
   border: 1px solid var(--border-color);
   border-radius: 4px;
   background-color: var(--bg-secondary);
-  padding: 2.5rem;
+  padding: 2rem 1.75rem; /* Slightly tighter padding for columns */
   position: relative;
 }
 
@@ -234,7 +241,7 @@ header {
   gap: 1.5rem;
 }
 
-@media (min-width: 768px) {
+@media (min-width: 768px) and (max-width: 1023px) {
   .options-grid {
     grid-template-columns: 1fr 1fr;
   }
