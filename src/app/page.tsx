@@ -21,6 +21,11 @@ export default function Home() {
   const [naturalWidth, setNaturalWidth] = useState<number>(0);
   const [naturalHeight, setNaturalHeight] = useState<number>(0);
 
+  const [isDragging, setIsDragging] = useState<boolean>(false);
+  const [isResizing, setIsResizing] = useState<boolean>(false);
+  const [dragStart, setDragStart] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+  const [boxStart, setBoxStart] = useState<{ x: number; y: number; w: number; h: number }>({ x: 0, y: 0, w: 100, h: 100 });
+
   const [processing, setProcessing] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [outputUrl, setOutputUrl] = useState<string | null>(null);
@@ -41,6 +46,56 @@ export default function Home() {
       setCropY(0);
     };
     img.src = URL.createObjectURL(selectedFile);
+  };
+
+  const handlePointerDown = (e: React.PointerEvent, action: 'drag' | 'resize') => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    const container = e.currentTarget.closest('.preview-container');
+    if (container) {
+      container.setPointerCapture(e.pointerId);
+    }
+    
+    if (action === 'drag') {
+      setIsDragging(true);
+    } else {
+      setIsResizing(true);
+    }
+    
+    setDragStart({ x: e.clientX, y: e.clientY });
+    setBoxStart({ x: cropX, y: cropY, w: cropWidth, h: cropHeight });
+  };
+
+  const handlePointerMove = (e: React.PointerEvent) => {
+    if (!isDragging && !isResizing) return;
+    
+    const container = e.currentTarget.closest('.preview-container') as HTMLDivElement | null;
+    if (!container) return;
+    
+    const rect = container.getBoundingClientRect();
+    const scaleX = naturalWidth / rect.width;
+    const scaleY = naturalHeight / rect.height;
+    
+    const deltaX = (e.clientX - dragStart.x) * scaleX;
+    const deltaY = (e.clientY - dragStart.y) * scaleY;
+    
+    if (isDragging) {
+      const targetX = Math.round(boxStart.x + deltaX);
+      const targetY = Math.round(boxStart.y + deltaY);
+      setCropX(Math.max(0, Math.min(naturalWidth - boxStart.w, targetX)));
+      setCropY(Math.max(0, Math.min(naturalHeight - boxStart.h, targetY)));
+    } else if (isResizing) {
+      const targetW = Math.round(boxStart.w + deltaX);
+      const targetH = Math.round(boxStart.h + deltaY);
+      setCropWidth(Math.max(10, Math.min(naturalWidth - boxStart.x, targetW)));
+      setCropHeight(Math.max(10, Math.min(naturalHeight - boxStart.y, targetH)));
+    }
+  };
+
+  const handlePointerUp = (e: React.PointerEvent) => {
+    setIsDragging(false);
+    setIsResizing(false);
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -187,13 +242,18 @@ export default function Home() {
               />
             </div>
           ) : (
-            <div className="preview-container" style={{ position: 'relative', width: '100%' }}>
+            <div 
+              className="preview-container" 
+              style={{ position: 'relative', width: '100%', touchAction: 'none' }}
+              onPointerMove={handlePointerMove}
+              onPointerUp={handlePointerUp}
+            >
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img 
                 src={previewUrl} 
                 alt="Preview" 
                 className="preview-image" 
-                style={{ width: '100%', height: 'auto', display: 'block' }}
+                style={{ width: '100%', height: 'auto', display: 'block', userSelect: 'none', WebkitUserSelect: 'none' }}
               />
               {enableCrop && naturalWidth > 0 && naturalHeight > 0 && (
                 <div style={{
@@ -202,19 +262,41 @@ export default function Home() {
                   left: 0,
                   right: 0,
                   bottom: 0,
-                  pointerEvents: 'none',
                   overflow: 'hidden'
                 }}>
-                  <div style={{
-                    position: 'absolute',
-                    border: '1.5px dashed #fafafa',
-                    boxShadow: '0 0 0 9999px rgba(9, 9, 11, 0.75)',
-                    left: `${(cropX / naturalWidth) * 100}%`,
-                    top: `${(cropY / naturalHeight) * 100}%`,
-                    width: `${(cropWidth / naturalWidth) * 100}%`,
-                    height: `${(cropHeight / naturalHeight) * 100}%`,
-                    boxSizing: 'border-box'
-                  }} />
+                  <div 
+                    onPointerDown={(e) => handlePointerDown(e, 'drag')}
+                    style={{
+                      position: 'absolute',
+                      border: '1.5px dashed #fafafa',
+                      boxShadow: '0 0 0 9999px rgba(9, 9, 11, 0.75)',
+                      left: `${(cropX / naturalWidth) * 100}%`,
+                      top: `${(cropY / naturalHeight) * 100}%`,
+                      width: `${(cropWidth / naturalWidth) * 100}%`,
+                      height: `${(cropHeight / naturalHeight) * 100}%`,
+                      boxSizing: 'border-box',
+                      cursor: isDragging ? 'grabbing' : 'grab',
+                      pointerEvents: 'auto',
+                      touchAction: 'none'
+                    }}
+                  >
+                    {/* Corner Resize Handle */}
+                    <div 
+                      onPointerDown={(e) => handlePointerDown(e, 'resize')}
+                      style={{
+                        position: 'absolute',
+                        right: '-6px',
+                        bottom: '-6px',
+                        width: '12px',
+                        height: '12px',
+                        backgroundColor: '#fafafa',
+                        border: '1.5px solid #09090b',
+                        cursor: 'se-resize',
+                        pointerEvents: 'auto',
+                        zIndex: 20
+                      }}
+                    />
+                  </div>
                 </div>
               )}
               <div className="preview-details">
