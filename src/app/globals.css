@@ -49,9 +49,7 @@ body {
 
 header {
   text-align: left;
-  border-bottom: 1px solid var(--border-color);
-  padding-bottom: 2.5rem;
-  margin-bottom: 3.5rem;
+  margin-bottom: 2.5rem;
 }
 
 .logo-container {
@@ -156,7 +154,7 @@ header {
 .dropzone {
   border: 1px dashed var(--text-muted);
   border-radius: 2px;
-  height: 450px; /* Symmetrical workbench height */
+  height: 320px; /* Symmetrical workbench height */
   text-align: center;
   cursor: pointer;
   background-color: rgba(255, 255, 255, 0.01);
@@ -200,7 +198,7 @@ header {
   align-items: center;
   justify-content: center;
   background-color: #000000;
-  height: 450px; /* Symmetrical workbench height */
+  height: 320px; /* Symmetrical workbench height */
   width: 100%;
 }
 
@@ -277,11 +275,27 @@ header {
   font-family: var(--font-sans);
   font-size: 0.92rem;
   transition: all 0.15s ease;
+}
+
+.select-control {
+  -webkit-appearance: none;
+  -moz-appearance: none;
   appearance: none;
   background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2371717a' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
   background-position: right 1rem center;
   background-size: 1.1rem;
+}
+
+/* Remove spin buttons from number inputs */
+.input-control::-webkit-outer-spin-button,
+.input-control::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.input-control[type="number"] {
+  -moz-appearance: textfield;
 }
 
 .select-control:hover, .input-control:hover {
@@ -412,6 +426,12 @@ header {
   margin-bottom: 2rem;
   gap: 2rem;
   overflow-x: auto;
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.tabs-header::-webkit-scrollbar {
+  display: none;
 }
 
 .tab-btn {
@@ -628,3 +648,306 @@ code {
     scroll-behavior: auto !important;
   }
 }
+
+/* SpecularButton Styles */
+.specular-btn {
+  position: relative;
+  margin: 0;
+  display: inline-flex;
+  cursor: pointer;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  font-weight: 500;
+  line-height: 1;
+  letter-spacing: 0.01em;
+  outline: none;
+  transition: transform 0.15s ease;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 8px 24px rgba(0, 0, 0, 0.25);
+  
+  color: var(--sb-text-color);
+  border-radius: var(--sb-radius);
+  background: color-mix(in srgb, var(--sb-tint) calc(var(--sb-tint-opacity) * 100%), transparent);
+  backdrop-filter: blur(var(--sb-blur));
+}
+
+.specular-btn:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+.specular-btn:disabled {
+  cursor: default;
+  opacity: 0.55;
+}
+
+.specular-btn:disabled:active {
+  transform: scale(1);
+}
+
+.specular-btn:focus-visible {
+  outline: 2px solid var(--border-focus);
+  outline-offset: 3px;
+}
+
+/* Sizes */
+.specular-btn-sm {
+  font-size: 0.85rem;
+  padding: 10px 22px;
+}
+
+.specular-btn-md {
+  font-size: 1rem;
+  padding: 14px 30px;
+}
+
+.specular-btn-lg {
+  font-size: 1.15rem;
+  padding: 18px 40px;
+}
+
+/* Canvas/FX Layer */
+.specular-btn-fx {
+  pointer-events: none;
+  position: absolute;
+  top: -20px;
+  left: -20px;
+  right: -20px;
+  bottom: -20px;
+  z-index: 1;
+}
+
+.specular-btn-fx canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* Label Layer */
+.specular-btn-label {
+  position: relative;
+  z-index: 2;
+}
+
+/* Dev Resources Layout */
+.dev-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 2rem;
+  margin-top: 1.5rem;
+}
+
+@media (min-width: 768px) {
+  .dev-grid {
+    grid-template-columns: 240px 1fr;
+    align-items: start;
+  }
+}
+
+.endpoint-list {
+  display: flex;
+  flex-direction: row;
+  gap: 0.5rem;
+  overflow-x: auto;
+  padding-bottom: 0.5rem;
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.endpoint-list::-webkit-scrollbar {
+  display: none;
+}
+
+@media (min-width: 768px) {
+  .endpoint-list {
+    flex-direction: column;
+    overflow-x: visible;
+    border-right: 1px solid var(--border-color);
+    padding-right: 1.5rem;
+    padding-bottom: 0;
+  }
+}
+
+.endpoint-item {
+  background: none;
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
+  padding: 0.75rem 1rem;
+  text-align: left;
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  border-radius: 2px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: auto;
+}
+
+@media (min-width: 768px) {
+  .endpoint-item {
+    width: 100%;
+  }
+}
+
+.endpoint-item:hover {
+  border-color: var(--text-primary);
+  color: var(--text-primary);
+}
+
+.endpoint-item.active {
+  background-color: var(--bg-secondary);
+  border-color: var(--text-primary);
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.method-badge {
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 0.15rem 0.4rem;
+  border-radius: 2px;
+  text-transform: uppercase;
+}
+
+.method-badge.get {
+  background-color: rgba(16, 185, 129, 0.1);
+  color: var(--success);
+  border: 1px solid rgba(16, 185, 129, 0.2);
+}
+
+.method-badge.post {
+  background-color: rgba(59, 130, 246, 0.1);
+  color: #3b82f6;
+  border: 1px solid rgba(59, 130, 246, 0.2);
+}
+
+/* Parameters Table */
+.params-table-container {
+  width: 100%;
+  overflow-x: auto;
+  margin: 1.5rem 0;
+  border: 1px solid var(--border-color);
+  border-radius: 2px;
+}
+
+.params-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+  background-color: rgba(255, 255, 255, 0.005);
+}
+
+.params-table th, .params-table td {
+  padding: 0.75rem 1rem;
+  text-align: left;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.params-table tr:last-child th, .params-table tr:last-child td {
+  border-bottom: none;
+}
+
+.params-table th {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 600;
+  background-color: var(--bg-secondary);
+}
+
+.param-name {
+  font-family: var(--font-mono);
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.param-type {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+
+.param-req {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--error);
+  text-transform: uppercase;
+  background-color: rgba(239, 68, 68, 0.08);
+  padding: 0.1rem 0.3rem;
+  border-radius: 2px;
+}
+
+.param-opt {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  background-color: rgba(255, 255, 255, 0.05);
+  padding: 0.1rem 0.3rem;
+  border-radius: 2px;
+}
+
+/* Pipeline Architecture Visuals */
+.arch-pipeline {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.25rem;
+  margin-top: 1.5rem;
+}
+
+@media (min-width: 640px) {
+  .arch-pipeline {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 1024px) {
+  .arch-pipeline {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+.arch-node {
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  padding: 1.5rem;
+  border-radius: 3px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.arch-node:hover {
+  border-color: var(--text-secondary);
+  transform: translateY(-2px);
+  background-color: rgba(255, 255, 255, 0.015);
+}
+
+.arch-node-num {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  font-weight: 600;
+  letter-spacing: 0.05em;
+}
+
+.arch-node-title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.arch-node-desc {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+

@@ -1,13 +1,14 @@
 'use client';
 
 import React, { useState, useRef } from 'react';
+import SpecularButton from './SpecularButton';
 
 type OperationType = 'convert' | 'remove-background' | 'convert-and-remove-background';
 
 export default function Home() {
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const [operation, setOperation] = useState<OperationType>('convert-and-remove-background');
+  const [operation, setOperation] = useState<OperationType>('convert');
   const [format, setFormat] = useState<string>('webp');
   const [quality, setQuality] = useState<number>(85);
   const [background, setBackground] = useState<string>('transparent');
@@ -34,6 +35,7 @@ export default function Home() {
   const [outputUrl, setOutputUrl] = useState<string | null>(null);
   const [outputSize, setOutputSize] = useState<string>('');
   const [activeTab, setActiveTab] = useState<string>('api');
+  const [activeEndpoint, setActiveEndpoint] = useState<string>('process');
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [dragActive, setDragActive] = useState<boolean>(false);
@@ -55,9 +57,9 @@ export default function Home() {
     e.preventDefault();
     e.stopPropagation();
     
-    const container = e.currentTarget.closest('.preview-container');
-    if (container) {
-      container.setPointerCapture(e.pointerId);
+    const wrapper = e.currentTarget.closest('.image-crop-wrapper');
+    if (wrapper) {
+      wrapper.setPointerCapture(e.pointerId);
     }
     
     if (action === 'drag') {
@@ -73,10 +75,10 @@ export default function Home() {
   const handlePointerMove = (e: React.PointerEvent) => {
     if (!isDragging && !isResizing) return;
     
-    const container = e.currentTarget.closest('.preview-container') as HTMLDivElement | null;
-    if (!container) return;
+    const wrapper = e.currentTarget.closest('.image-crop-wrapper') as HTMLDivElement | null;
+    if (!wrapper) return;
     
-    const rect = container.getBoundingClientRect();
+    const rect = wrapper.getBoundingClientRect();
     const scaleX = naturalWidth / rect.width;
     const scaleY = naturalHeight / rect.height;
     
@@ -99,6 +101,15 @@ export default function Home() {
   const handlePointerUp = (e: React.PointerEvent) => {
     setIsDragging(false);
     setIsResizing(false);
+    
+    const wrapper = e.currentTarget.closest('.image-crop-wrapper');
+    if (wrapper) {
+      try {
+        wrapper.releasePointerCapture(e.pointerId);
+      } catch (err) {
+        // ignore
+      }
+    }
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -186,8 +197,28 @@ export default function Home() {
       });
 
       if (!response.ok) {
-        const errData = await response.json();
-        throw new Error(errData.error || 'Failed to process image');
+        let errMsg = 'Failed to process image';
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+          try {
+            const errData = await response.json();
+            errMsg = errData.error || errMsg;
+          } catch (e) {
+            // ignore
+          }
+        } else {
+          try {
+            const text = await response.text();
+            if (text && text.length < 200) {
+              errMsg = text;
+            } else {
+              errMsg = `Server error (${response.status}): ${response.statusText || 'Internal Server Error'}`;
+            }
+          } catch (e) {
+            errMsg = `Server error (${response.status})`;
+          }
+        }
+        throw new Error(errMsg);
       }
 
       const blob = await response.blob();
@@ -237,9 +268,9 @@ export default function Home() {
               onChange={(e) => setOperation(e.target.value as OperationType)}
               disabled={processing || !file}
             >
+              <option value="convert">Convert Format</option>
+              <option value="remove-background">Remove Background</option>
               <option value="convert-and-remove-background">Convert + Remove BG</option>
-              <option value="remove-background">Remove Background Only</option>
-              <option value="convert">Convert Format Only</option>
             </select>
           </div>
 
@@ -397,15 +428,22 @@ export default function Home() {
             )}
           </div>
 
-          <button 
+          <SpecularButton 
             type="button" 
-            className="btn btn-primary" 
+            size="lg"
+            radius={4}
+            tint="#ffffff"
+            tintOpacity={1}
+            textColor="#09090b"
+            lineColor="#ffffff"
+            baseColor="#fafafa"
+            intensity={1.0}
             onClick={handleSubmit}
             disabled={processing || !file}
-            style={{ marginTop: 'auto' }}
+            style={{ marginTop: 'auto', width: '100%', fontFamily: 'var(--font-mono)', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: '700' }}
           >
-            RUN PIPELINE
-          </button>
+            RUN
+          </SpecularButton>
         </div>
       </aside>
 
@@ -426,22 +464,37 @@ export default function Home() {
         </h2>
         {file && (
           <div style={{ display: 'flex', gap: '1rem' }}>
-            <button 
+            <SpecularButton 
               type="button" 
-              onClick={() => setShowSettings(true)} 
-              className="settings-toggle-btn"
+              size="sm"
+              radius={4}
+              tint="#ffffff"
+              tintOpacity={0.05}
+              textColor="#fafafa"
+              lineColor="#ffffff"
+              baseColor="#18181b"
+              intensity={0.8}
+              onClick={() => setShowSettings(true)}
+              style={{ fontFamily: 'var(--font-mono)', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: '700' }}
             >
-              ⚙️ CONFIG PARAMETERS
-            </button>
-            <button 
+              SETTINGS
+            </SpecularButton>
+            <SpecularButton 
               type="button" 
-              onClick={handleSubmit} 
-              className="settings-toggle-btn" 
-              style={{ backgroundColor: 'var(--text-primary)', color: 'var(--bg-primary)', fontWeight: '700' }}
+              size="sm"
+              radius={4}
+              tint="#ffffff"
+              tintOpacity={1}
+              textColor="#09090b"
+              lineColor="#ffffff"
+              baseColor="#fafafa"
+              intensity={1.0}
+              onClick={handleSubmit}
               disabled={processing}
+              style={{ fontFamily: 'var(--font-mono)', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: '700' }}
             >
-              🚀 RUN PIPELINE
-            </button>
+              RUN
+            </SpecularButton>
           </div>
         )}
       </div>
@@ -478,69 +531,71 @@ export default function Home() {
             </div>
           ) : (
             <div className="preview-container">
-              <div 
-                className="image-crop-wrapper" 
-                style={{ 
-                  position: 'relative', 
-                  maxWidth: '100%', 
-                  maxHeight: '100%', 
-                  aspectRatio: `${naturalWidth} / ${naturalHeight}`,
-                  touchAction: 'none' 
-                }}
-                onPointerMove={handlePointerMove}
-                onPointerUp={handlePointerUp}
-              >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img 
-                  src={previewUrl} 
-                  alt="Preview" 
-                  style={{ width: '100%', height: '100%', display: 'block', userSelect: 'none', WebkitUserSelect: 'none' }}
-                />
-                {enableCrop && naturalWidth > 0 && naturalHeight > 0 && (
-                  <div style={{
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
-                    overflow: 'hidden'
-                  }}>
-                    {/* Draggable/Resizable Crop Highlight overlay */}
-                    <div 
-                      onPointerDown={(e) => handlePointerDown(e, 'drag')}
-                      style={{
-                        position: 'absolute',
-                        border: '1.5px dashed #fafafa',
-                        boxShadow: '0 0 0 9999px rgba(9, 9, 11, 0.75)',
-                        left: `${(cropX / naturalWidth) * 100}%`,
-                        top: `${(cropY / naturalHeight) * 100}%`,
-                        width: `${(cropWidth / naturalWidth) * 100}%`,
-                        height: `${(cropHeight / naturalHeight) * 100}%`,
-                        boxSizing: 'border-box',
-                        cursor: isDragging ? 'grabbing' : 'grab',
-                        pointerEvents: 'auto',
-                        touchAction: 'none'
-                      }}
-                    >
-                      {/* Corner Resize Handle */}
+              <div style={{ flexGrow: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', minHeight: 0, overflow: 'hidden', position: 'relative' }}>
+                <div 
+                  className="image-crop-wrapper" 
+                  style={{ 
+                    position: 'relative', 
+                    maxWidth: '100%', 
+                    maxHeight: '100%', 
+                    aspectRatio: `${naturalWidth} / ${naturalHeight}`,
+                    touchAction: 'none' 
+                  }}
+                  onPointerMove={handlePointerMove}
+                  onPointerUp={handlePointerUp}
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img 
+                    src={previewUrl} 
+                    alt="Preview" 
+                    style={{ width: '100%', height: '100%', display: 'block', userSelect: 'none', WebkitUserSelect: 'none' }}
+                  />
+                  {enableCrop && naturalWidth > 0 && naturalHeight > 0 && (
+                    <div style={{
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      overflow: 'hidden'
+                    }}>
+                      {/* Draggable/Resizable Crop Highlight overlay */}
                       <div 
-                        onPointerDown={(e) => handlePointerDown(e, 'resize')}
+                        onPointerDown={(e) => handlePointerDown(e, 'drag')}
                         style={{
                           position: 'absolute',
-                          right: '-6px',
-                          bottom: '-6px',
-                          width: '12px',
-                          height: '12px',
-                          backgroundColor: '#fafafa',
-                          border: '1.5px solid #09090b',
-                          cursor: 'se-resize',
+                          border: '1.5px dashed #fafafa',
+                          boxShadow: '0 0 0 9999px rgba(9, 9, 11, 0.75)',
+                          left: `${(cropX / naturalWidth) * 100}%`,
+                          top: `${(cropY / naturalHeight) * 100}%`,
+                          width: `${(cropWidth / naturalWidth) * 100}%`,
+                          height: `${(cropHeight / naturalHeight) * 100}%`,
+                          boxSizing: 'border-box',
+                          cursor: isDragging ? 'grabbing' : 'grab',
                           pointerEvents: 'auto',
-                          zIndex: 20
+                          touchAction: 'none'
                         }}
-                      />
+                      >
+                        {/* Corner Resize Handle */}
+                        <div 
+                          onPointerDown={(e) => handlePointerDown(e, 'resize')}
+                          style={{
+                            position: 'absolute',
+                            right: '-6px',
+                            bottom: '-6px',
+                            width: '12px',
+                            height: '12px',
+                            backgroundColor: '#fafafa',
+                            border: '1.5px solid #09090b',
+                            cursor: 'se-resize',
+                            pointerEvents: 'auto',
+                            zIndex: 20
+                          }}
+                        />
+                      </div>
                     </div>
-                  </div>
-                )}
+                  )}
+                </div>
               </div>
               <div className="preview-details">
                 <span>FILE: {file?.name}</span>
@@ -577,8 +632,10 @@ export default function Home() {
           {outputUrl ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
               <div className="preview-container checkerboard">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={outputUrl} alt="Output" className="preview-image" style={{ width: '100%', height: 'auto', display: 'block' }} />
+                <div style={{ flexGrow: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', minHeight: 0, overflow: 'hidden' }}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={outputUrl} alt="Output" className="preview-image" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', display: 'block' }} />
+                </div>
                 <div className="preview-details">
                   <span>OUT SIZE: {outputSize}</span>
                   <a href={outputUrl} download={`chimera_${Date.now()}.${format}`} style={{ color: 'var(--text-primary)', textDecoration: 'underline', fontWeight: '700' }}>
@@ -589,7 +646,7 @@ export default function Home() {
             </div>
           ) : (
             !processing && (
-              <div style={{ border: '1px dashed var(--border-color)', height: '450px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', textAlign: 'center', fontSize: '0.88rem', fontFamily: 'var(--font-mono)', borderRadius: '2px', backgroundColor: 'rgba(255, 255, 255, 0.01)' }}>
+              <div style={{ border: '1px dashed var(--border-color)', height: '320px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', textAlign: 'center', fontSize: '0.88rem', fontFamily: 'var(--font-mono)', borderRadius: '2px', backgroundColor: 'rgba(255, 255, 255, 0.01)' }}>
                 <span>[AWAITING PIPELINE RUN]</span>
               </div>
             )
@@ -624,41 +681,99 @@ export default function Home() {
 
         {/* Tab 1: HTTP API */}
         <div className={`tab-content ${activeTab === 'api' ? 'active' : ''}`}>
-          <h3 style={{ marginBottom: '1rem', fontFamily: 'var(--font-mono)', fontSize: '1rem', textTransform: 'uppercase' }}>REST Endpoints</h3>
-          <p style={{ color: 'var(--text-secondary)', marginBottom: '1.5rem', fontSize: '0.9rem' }}>
-            Fully stateless microservice entrypoints. Supports standard multi-part payload uploads.
-          </p>
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.75rem' }}>
-            <div>
-              <h4 style={{ color: 'var(--text-primary)', marginBottom: '0.5rem', fontFamily: 'var(--font-mono)', fontSize: '0.9rem' }}>GET /api/health</h4>
-              <pre>
-{`curl -X GET https://chimerraa.vercel.app/api/health`}
-              </pre>
+          <div className="dev-grid">
+            <div className="endpoint-list">
+              <button 
+                type="button" 
+                className={`endpoint-item ${activeEndpoint === 'process' ? 'active' : ''}`}
+                onClick={() => setActiveEndpoint('process')}
+              >
+                <span className="method-badge post">POST</span> /api/process
+              </button>
+              <button 
+                type="button" 
+                className={`endpoint-item ${activeEndpoint === 'convert' ? 'active' : ''}`}
+                onClick={() => setActiveEndpoint('convert')}
+              >
+                <span className="method-badge post">POST</span> /api/convert
+              </button>
+              <button 
+                type="button" 
+                className={`endpoint-item ${activeEndpoint === 'remove-bg' ? 'active' : ''}`}
+                onClick={() => setActiveEndpoint('remove-bg')}
+              >
+                <span className="method-badge post">POST</span> /api/remove-bg
+              </button>
+              <button 
+                type="button" 
+                className={`endpoint-item ${activeEndpoint === 'health' ? 'active' : ''}`}
+                onClick={() => setActiveEndpoint('health')}
+              >
+                <span className="method-badge get">GET</span> /api/health
+              </button>
             </div>
 
-            <div>
-              <h4 style={{ color: 'var(--text-primary)', marginBottom: '0.5rem', fontFamily: 'var(--font-mono)', fontSize: '0.9rem' }}>POST /api/convert</h4>
-              <pre>
-{`curl -X POST https://chimerraa.vercel.app/api/convert \\
-  -F "image=@photo.jpg" \\
-  -F "format=webp" \\
-  -F "quality=85"`}
-              </pre>
-            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              {activeEndpoint === 'process' && (
+                <>
+                  <h3 style={{ fontFamily: 'var(--font-mono)', fontSize: '1rem', textTransform: 'uppercase' }}>Unified Processing Pipeline</h3>
+                  <p style={{ color: 'var(--text-secondary)', fontSize: '0.88rem' }}>
+                    Stateless multi-operation gateway. Combines visual cropping, local AI segmentation, background overlay fill, and format conversion in a single network pass.
+                  </p>
+                  
+                  <div className="params-table-container">
+                    <table className="params-table">
+                      <thead>
+                        <tr>
+                          <th>Parameter</th>
+                          <th>Type</th>
+                          <th>Requirement</th>
+                          <th>Description</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr>
+                          <td className="param-name">image</td>
+                          <td className="param-type">File (binary)</td>
+                          <td><span className="param-req">required</span></td>
+                          <td>Target image to process. Maximum file size: 20MB.</td>
+                        </tr>
+                        <tr>
+                          <td className="param-name">operation</td>
+                          <td className="param-type">String</td>
+                          <td><span className="param-req">required</span></td>
+                          <td><code>convert</code> | <code>remove-background</code> | <code>convert-and-remove-background</code></td>
+                        </tr>
+                        <tr>
+                          <td className="param-name">format</td>
+                          <td className="param-type">String</td>
+                          <td><span className="param-opt">optional</span></td>
+                          <td>Output format: <code>webp</code> | <code>png</code> | <code>jpeg</code> | <code>avif</code>. Required if converting.</td>
+                        </tr>
+                        <tr>
+                          <td className="param-name">background</td>
+                          <td className="param-type">String</td>
+                          <td><span className="param-opt">optional</span></td>
+                          <td>Background fill options: <code>transparent</code> | <code>white</code> | <code>black</code> | Hex code color.</td>
+                        </tr>
+                        <tr>
+                          <td className="param-name">cropX / cropY</td>
+                          <td className="param-type">Number</td>
+                          <td><span className="param-opt">optional</span></td>
+                          <td>Pixel coordinates for top-left crop offset start.</td>
+                        </tr>
+                        <tr>
+                          <td className="param-name">cropWidth / cropHeight</td>
+                          <td className="param-type">Number</td>
+                          <td><span className="param-opt">optional</span></td>
+                          <td>Dimensions in pixels for region extraction bounds.</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
 
-            <div>
-              <h4 style={{ color: 'var(--text-primary)', marginBottom: '0.5rem', fontFamily: 'var(--font-mono)', fontSize: '0.9rem' }}>POST /api/remove-background</h4>
-              <pre>
-{`curl -X POST https://chimerraa.vercel.app/api/remove-background \\
-  -F "image=@photo.jpg" \\
-  -F "background=transparent"`}
-              </pre>
-            </div>
-
-            <div>
-              <h4 style={{ color: 'var(--text-primary)', marginBottom: '0.5rem', fontFamily: 'var(--font-mono)', fontSize: '0.9rem' }}>POST /api/process</h4>
-              <pre>
+                  <h4 style={{ fontFamily: 'var(--font-mono)', fontSize: '0.85rem', textTransform: 'uppercase', color: 'var(--text-secondary)' }}>Example Curl Request</h4>
+                  <pre>
 {`curl -X POST https://chimerraa.vercel.app/api/process \\
   -F "image=@photo.jpg" \\
   -F "operation=convert-and-remove-background" \\
@@ -668,43 +783,209 @@ export default function Home() {
   -F "cropY=0" \\
   -F "cropWidth=800" \\
   -F "cropHeight=600"`}
-              </pre>
+                  </pre>
+                </>
+              )}
+
+              {activeEndpoint === 'convert' && (
+                <>
+                  <h3 style={{ fontFamily: 'var(--font-mono)', fontSize: '1rem', textTransform: 'uppercase' }}>Convert Image Format</h3>
+                  <p style={{ color: 'var(--text-secondary)', fontSize: '0.88rem' }}>
+                    Re-encodes image buffer to target compressed formats without performing pixel layer segmentation.
+                  </p>
+
+                  <div className="params-table-container">
+                    <table className="params-table">
+                      <thead>
+                        <tr>
+                          <th>Parameter</th>
+                          <th>Type</th>
+                          <th>Requirement</th>
+                          <th>Description</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr>
+                          <td className="param-name">image</td>
+                          <td className="param-type">File (binary)</td>
+                          <td><span className="param-req">required</span></td>
+                          <td>Target image to convert. Maximum file size: 20MB.</td>
+                        </tr>
+                        <tr>
+                          <td className="param-name">format</td>
+                          <td className="param-type">String</td>
+                          <td><span className="param-req">required</span></td>
+                          <td>Target output format: <code>webp</code> | <code>png</code> | <code>jpeg</code> | <code>avif</code>.</td>
+                        </tr>
+                        <tr>
+                          <td className="param-name">quality</td>
+                          <td className="param-type">Number</td>
+                          <td><span className="param-opt">optional</span></td>
+                          <td>Quality parameter factor: value from 1 to 100 (defaults to 85).</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+
+                  <h4 style={{ fontFamily: 'var(--font-mono)', fontSize: '0.85rem', textTransform: 'uppercase', color: 'var(--text-secondary)' }}>Example Curl Request</h4>
+                  <pre>
+{`curl -X POST https://chimerraa.vercel.app/api/convert \\
+  -F "image=@photo.jpg" \\
+  -F "format=webp" \\
+  -F "quality=85"`}
+                  </pre>
+                </>
+              )}
+
+              {activeEndpoint === 'remove-bg' && (
+                <>
+                  <h3 style={{ fontFamily: 'var(--font-mono)', fontSize: '1rem', textTransform: 'uppercase' }}>Remove Background Only</h3>
+                  <p style={{ color: 'var(--text-secondary)', fontSize: '0.88rem' }}>
+                    Executes BRIA RMBG-1.4 image segmentation mask on the source buffer. Retains original format while altering the background transparency.
+                  </p>
+
+                  <div className="params-table-container">
+                    <table className="params-table">
+                      <thead>
+                        <tr>
+                          <th>Parameter</th>
+                          <th>Type</th>
+                          <th>Requirement</th>
+                          <th>Description</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr>
+                          <td className="param-name">image</td>
+                          <td className="param-type">File (binary)</td>
+                          <td><span className="param-req">required</span></td>
+                          <td>Target image to process. Maximum file size: 20MB.</td>
+                        </tr>
+                        <tr>
+                          <td className="param-name">background</td>
+                          <td className="param-type">String</td>
+                          <td><span className="param-opt">optional</span></td>
+                          <td>Solid fill background: <code>transparent</code> | <code>white</code> | <code>black</code> | hex values (defaults to <code>transparent</code>).</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+
+                  <h4 style={{ fontFamily: 'var(--font-mono)', fontSize: '0.85rem', textTransform: 'uppercase', color: 'var(--text-secondary)' }}>Example Curl Request</h4>
+                  <pre>
+{`curl -X POST https://chimerraa.vercel.app/api/remove-background \\
+  -F "image=@photo.jpg" \\
+  -F "background=transparent"`}
+                  </pre>
+                </>
+              )}
+
+              {activeEndpoint === 'health' && (
+                <>
+                  <h3 style={{ fontFamily: 'var(--font-mono)', fontSize: '1rem', textTransform: 'uppercase' }}>Health Probe</h3>
+                  <p style={{ color: 'var(--text-secondary)', fontSize: '0.88rem' }}>
+                    Stateless endpoint to verify service availability and infrastructure nodes routing state.
+                  </p>
+
+                  <h4 style={{ fontFamily: 'var(--font-mono)', fontSize: '0.85rem', textTransform: 'uppercase', color: 'var(--text-secondary)' }}>Example Curl Request</h4>
+                  <pre>
+{`curl -X GET https://chimerraa.vercel.app/api/health`}
+                  </pre>
+
+                  <h4 style={{ fontFamily: 'var(--font-mono)', fontSize: '0.85rem', textTransform: 'uppercase', color: 'var(--text-secondary)', marginTop: '0.5rem' }}>Response Payload (200 OK)</h4>
+                  <pre>
+{`{
+  "ok": true,
+  "service": "chimera"
+}`}
+                  </pre>
+                </>
+              )}
             </div>
           </div>
         </div>
 
         {/* Tab 2: Telegram Bot */}
         <div className={`tab-content ${activeTab === 'telegram' ? 'active' : ''}`}>
-          <h3 style={{ marginBottom: '1rem', fontFamily: 'var(--font-mono)', fontSize: '1rem', textTransform: 'uppercase' }}>Webhook Setup</h3>
-          <p style={{ color: 'var(--text-secondary)', marginBottom: '1rem', fontSize: '0.9rem' }}>
-            Telegram message streams bind dynamically. Run the following to configure standard webhook routing:
+          <h3 style={{ marginBottom: '1rem', fontFamily: 'var(--font-mono)', fontSize: '1rem', textTransform: 'uppercase' }}>Webhook Configuration</h3>
+          <p style={{ color: 'var(--text-secondary)', marginBottom: '1.5rem', fontSize: '0.88rem', lineHeight: '1.6' }}>
+            Bind Telegram message updates to the Chimera webhook handler. Send a POST request to register your Bot Token:
           </p>
           <pre>
 {`curl -X POST "https://api.telegram.org/bot<TELEGRAM_BOT_TOKEN>/setWebhook" \\
   -H "Content-Type: application/json" \\
   -d '{"url": "https://chimerraa.vercel.app/api/telegram/webhook", "secret_token": "<TELEGRAM_WEBHOOK_SECRET>"}'`}
           </pre>
+
+          <h3 style={{ marginTop: '2.5rem', marginBottom: '1rem', fontFamily: 'var(--font-mono)', fontSize: '1rem', textTransform: 'uppercase' }}>Bot Commands</h3>
+          <div className="params-table-container">
+            <table className="params-table">
+              <thead>
+                <tr>
+                  <th>Command</th>
+                  <th>Arguments</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td className="param-name">/start</td>
+                  <td className="param-opt">none</td>
+                  <td>Initializes connection and prints system parameter guidelines.</td>
+                </tr>
+                <tr>
+                  <td className="param-name">/convert</td>
+                  <td className="param-type">format [webp | png | jpg | avif]</td>
+                  <td>Converts subsequent images to the specified format.</td>
+                </tr>
+                <tr>
+                  <td className="param-name">/removebg</td>
+                  <td className="param-type">bg [transparent | white | black]</td>
+                  <td>Segments the background on images sent afterwards.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
         </div>
 
         {/* Tab 3: Architecture */}
         <div className={`tab-content ${activeTab === 'arch' ? 'active' : ''}`}>
-          <h3 style={{ marginBottom: '1rem', fontFamily: 'var(--font-mono)', fontSize: '1rem', textTransform: 'uppercase' }}>State-free Infrastructure</h3>
-          <p style={{ color: 'var(--text-secondary)', marginBottom: '1.5rem', fontSize: '0.9rem' }}>
-            Inference engine pipeline and network nodes:
+          <h3 style={{ marginBottom: '0.5rem', fontFamily: 'var(--font-mono)', fontSize: '1rem', textTransform: 'uppercase' }}>Stateless Data Flow</h3>
+          <p style={{ color: 'var(--text-secondary)', marginBottom: '1.5rem', fontSize: '0.88rem' }}>
+            Chimera is an ephemeral processing node. No data is stored persistently.
           </p>
 
-          <div className="arch-flow">
-            <div className="flow-step">[client] sends multi-part image payload</div>
-            <div className="flow-arrow">↓</div>
-            <div className="flow-step">[gateway] validates file boundaries & limits</div>
-            <div className="flow-arrow">↓</div>
-            <div className="flow-step">[decoder] Sharp parses headers & unpacks pixel channels</div>
-            <div className="flow-arrow">↓</div>
-            <div className="flow-step">[onnx runtime] performs local BRIA RMBG-1.4 segmentation</div>
-            <div className="flow-arrow">↓</div>
-            <div className="flow-step">[compositor] composites background and encodes target format</div>
-            <div className="flow-arrow">↓</div>
-            <div className="flow-step">[client] receives binary output buffer</div>
+          <div className="arch-pipeline">
+            <div className="arch-node">
+              <span className="arch-node-num">STAGE 01</span>
+              <h4 className="arch-node-title">Payload Ingestion</h4>
+              <p className="arch-node-desc">Client POSTs form-data. Gateway extracts files, target operations, quality modifiers, and crop coordinates.</p>
+            </div>
+            <div className="arch-node">
+              <span className="arch-node-num">STAGE 02</span>
+              <h4 className="arch-node-title">Sanity Guarding</h4>
+              <p className="arch-node-desc">System validates magic bytes, bounds limits, rate checks, and enforces maximum pixel counts constraints.</p>
+            </div>
+            <div className="arch-node">
+              <span className="arch-node-num">STAGE 03</span>
+              <h4 className="arch-node-title">Sharp Decoding</h4>
+              <p className="arch-node-desc">The image header is parsed, decompression starts, and raw pixel color channels are loaded into server memory buffer.</p>
+            </div>
+            <div className="arch-node">
+              <span className="arch-node-num">STAGE 04</span>
+              <h4 className="arch-node-title">AI Segmentation</h4>
+              <p className="arch-node-desc">Local ONNX Runtime executes the BRIA RMBG-1.4 model on CPU, producing a high-resolution alpha mask.</p>
+            </div>
+            <div className="arch-node">
+              <span className="arch-node-num">STAGE 05</span>
+              <h4 className="arch-node-title">Compositing Layer</h4>
+              <p className="arch-node-desc">Sharp merges the alpha mask back, applies flat background fills, and crops extraction coordinates.</p>
+            </div>
+            <div className="arch-node">
+              <span className="arch-node-num">STAGE 06</span>
+              <h4 className="arch-node-title">Format Encoding</h4>
+              <p className="arch-node-desc">Composited pixels are compressed (WebP, PNG, JPEG, AVIF) and returned as a direct download stream.</p>
+            </div>
           </div>
         </div>
       </section>
