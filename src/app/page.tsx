@@ -412,7 +412,6 @@ export default function Home() {
       <header>
         <div className="logo-container">
           <h1 className="logo-text">chimera.</h1>
-          <span className="logo-badge">Local Engine</span>
         </div>
         <p className="tagline">
           An industrial, stateless background-removal & format-conversion system.
@@ -478,64 +477,71 @@ export default function Home() {
               />
             </div>
           ) : (
-            <div 
-              className="preview-container" 
-              style={{ position: 'relative', width: '100%', touchAction: 'none' }}
-              onPointerMove={handlePointerMove}
-              onPointerUp={handlePointerUp}
-            >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img 
-                src={previewUrl} 
-                alt="Preview" 
-                className="preview-image" 
-                style={{ width: '100%', height: 'auto', display: 'block', userSelect: 'none', WebkitUserSelect: 'none' }}
-              />
-              {enableCrop && naturalWidth > 0 && naturalHeight > 0 && (
-                <div style={{
-                  position: 'absolute',
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  bottom: 0,
-                  overflow: 'hidden'
-                }}>
-                  {/* Draggable/Resizable Crop Highlight overlay */}
-                  <div 
-                    onPointerDown={(e) => handlePointerDown(e, 'drag')}
-                    style={{
-                      position: 'absolute',
-                      border: '1.5px dashed #fafafa',
-                      boxShadow: '0 0 0 9999px rgba(9, 9, 11, 0.75)',
-                      left: `${(cropX / naturalWidth) * 100}%`,
-                      top: `${(cropY / naturalHeight) * 100}%`,
-                      width: `${(cropWidth / naturalWidth) * 100}%`,
-                      height: `${(cropHeight / naturalHeight) * 100}%`,
-                      boxSizing: 'border-box',
-                      cursor: isDragging ? 'grabbing' : 'grab',
-                      pointerEvents: 'auto',
-                      touchAction: 'none'
-                    }}
-                  >
-                    {/* Corner Resize Handle */}
+            <div className="preview-container">
+              <div 
+                className="image-crop-wrapper" 
+                style={{ 
+                  position: 'relative', 
+                  maxWidth: '100%', 
+                  maxHeight: '100%', 
+                  aspectRatio: `${naturalWidth} / ${naturalHeight}`,
+                  touchAction: 'none' 
+                }}
+                onPointerMove={handlePointerMove}
+                onPointerUp={handlePointerUp}
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img 
+                  src={previewUrl} 
+                  alt="Preview" 
+                  style={{ width: '100%', height: '100%', display: 'block', userSelect: 'none', WebkitUserSelect: 'none' }}
+                />
+                {enableCrop && naturalWidth > 0 && naturalHeight > 0 && (
+                  <div style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    overflow: 'hidden'
+                  }}>
+                    {/* Draggable/Resizable Crop Highlight overlay */}
                     <div 
-                      onPointerDown={(e) => handlePointerDown(e, 'resize')}
+                      onPointerDown={(e) => handlePointerDown(e, 'drag')}
                       style={{
                         position: 'absolute',
-                        right: '-6px',
-                        bottom: '-6px',
-                        width: '12px',
-                        height: '12px',
-                        backgroundColor: '#fafafa',
-                        border: '1.5px solid #09090b',
-                        cursor: 'se-resize',
+                        border: '1.5px dashed #fafafa',
+                        boxShadow: '0 0 0 9999px rgba(9, 9, 11, 0.75)',
+                        left: `${(cropX / naturalWidth) * 100}%`,
+                        top: `${(cropY / naturalHeight) * 100}%`,
+                        width: `${(cropWidth / naturalWidth) * 100}%`,
+                        height: `${(cropHeight / naturalHeight) * 100}%`,
+                        boxSizing: 'border-box',
+                        cursor: isDragging ? 'grabbing' : 'grab',
                         pointerEvents: 'auto',
-                        zIndex: 20
+                        touchAction: 'none'
                       }}
-                    />
+                    >
+                      {/* Corner Resize Handle */}
+                      <div 
+                        onPointerDown={(e) => handlePointerDown(e, 'resize')}
+                        style={{
+                          position: 'absolute',
+                          right: '-6px',
+                          bottom: '-6px',
+                          width: '12px',
+                          height: '12px',
+                          backgroundColor: '#fafafa',
+                          border: '1.5px solid #09090b',
+                          cursor: 'se-resize',
+                          pointerEvents: 'auto',
+                          zIndex: 20
+                        }}
+                      />
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
+              </div>
               <div className="preview-details">
                 <span>FILE: {file?.name}</span>
                 <span>SIZE: {(file!.size / 1024 / 1024).toFixed(2)} MB</span>
@@ -580,13 +586,10 @@ export default function Home() {
                   </a>
                 </div>
               </div>
-              <div className="success-banner">
-                SUCCESS: Image operations finalized state-free. Mask compiled locally using BRIA RMBG-1.4.
-              </div>
             </div>
           ) : (
             !processing && (
-              <div style={{ border: '1px dashed var(--border-color)', height: '250px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', textAlign: 'center', fontSize: '0.88rem', fontFamily: 'var(--font-mono)' }}>
+              <div style={{ border: '1px dashed var(--border-color)', height: '450px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', textAlign: 'center', fontSize: '0.88rem', fontFamily: 'var(--font-mono)', borderRadius: '2px', backgroundColor: 'rgba(255, 255, 255, 0.01)' }}>
                 <span>[AWAITING PIPELINE RUN]</span>
               </div>
             )

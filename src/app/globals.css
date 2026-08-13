@@ -156,13 +156,14 @@ header {
 .dropzone {
   border: 1px dashed var(--text-muted);
   border-radius: 2px;
-  padding: 6rem 2rem;
+  height: 450px; /* Symmetrical workbench height */
   text-align: center;
   cursor: pointer;
   background-color: rgba(255, 255, 255, 0.01);
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
   gap: 1rem;
   transition: all 0.2s ease;
 }
@@ -197,12 +198,15 @@ header {
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
   background-color: #000000;
+  height: 450px; /* Symmetrical workbench height */
+  width: 100%;
 }
 
 .preview-image {
   max-width: 100%;
-  max-height: 500px;
+  max-height: 100%; /* constraint to fit inside container */
   object-fit: contain;
   display: block;
 }
