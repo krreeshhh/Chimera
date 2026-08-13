@@ -157,6 +157,13 @@ export async function removeBackground(
   return await processed.png().toBuffer();
 }
 
+export interface CropOptions {
+  left: number;
+  top: number;
+  width: number;
+  height: number;
+}
+
 /**
  * General unified processing helper.
  */
@@ -167,9 +174,22 @@ export async function processImage(
     format?: 'jpeg' | 'jpg' | 'png' | 'webp' | 'avif';
     quality?: number;
     background?: 'transparent' | 'white' | 'black' | string;
+    crop?: CropOptions;
   }
 ): Promise<Buffer> {
   let outputBuffer = buffer;
+
+  // Apply crop extraction first if specified
+  if (options.crop) {
+    outputBuffer = await sharp(outputBuffer)
+      .extract({
+        left: options.crop.left,
+        top: options.crop.top,
+        width: options.crop.width,
+        height: options.crop.height
+      })
+      .toBuffer();
+  }
 
   const runRemoveBg = options.operation === 'remove-background' || options.operation === 'convert-and-remove-background';
   const runConvert = options.operation === 'convert' || options.operation === 'convert-and-remove-background';
@@ -186,3 +206,4 @@ export async function processImage(
 
   return outputBuffer;
 }
+

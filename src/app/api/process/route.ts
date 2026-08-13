@@ -86,12 +86,32 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: validation.error }, { status: 400 });
     }
 
+    // Parse optional crop parameters
+    const cropXStr = formData.get('cropX') as string | null;
+    const cropYStr = formData.get('cropY') as string | null;
+    const cropWidthStr = formData.get('cropWidth') as string | null;
+    const cropHeightStr = formData.get('cropHeight') as string | null;
+
+    let crop = undefined;
+    if (cropXStr || cropYStr || cropWidthStr || cropHeightStr) {
+      const left = parseInt(cropXStr || '0', 10);
+      const top = parseInt(cropYStr || '0', 10);
+      const width = parseInt(cropWidthStr || '0', 10);
+      const height = parseInt(cropHeightStr || '0', 10);
+
+      // Validate coordinates: crop dimensions must be greater than 0
+      if (width > 0 && height > 0) {
+        crop = { left, top, width, height };
+      }
+    }
+
     // Process image (convert, remove-background, or both)
     const outputBuffer = await processImage(buffer, {
       operation: operation as any,
       format: outputFormat,
       quality,
-      background
+      background,
+      crop
     });
 
     // Determine filename and contentType

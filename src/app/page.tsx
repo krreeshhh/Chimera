@@ -12,6 +12,13 @@ export default function Home() {
   const [quality, setQuality] = useState<number>(85);
   const [background, setBackground] = useState<string>('transparent');
   
+  // Cropping variables
+  const [enableCrop, setEnableCrop] = useState<boolean>(false);
+  const [cropX, setCropX] = useState<number>(0);
+  const [cropY, setCropY] = useState<number>(0);
+  const [cropWidth, setCropWidth] = useState<number>(100);
+  const [cropHeight, setCropHeight] = useState<number>(100);
+
   const [processing, setProcessing] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [outputUrl, setOutputUrl] = useState<string | null>(null);
@@ -21,6 +28,17 @@ export default function Home() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [dragActive, setDragActive] = useState<boolean>(false);
 
+  const initializeCropDimensions = (selectedFile: File) => {
+    const img = new Image();
+    img.onload = () => {
+      setCropWidth(img.naturalWidth);
+      setCropHeight(img.naturalHeight);
+      setCropX(0);
+      setCropY(0);
+    };
+    img.src = URL.createObjectURL(selectedFile);
+  };
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const selectedFile = e.target.files[0];
@@ -28,6 +46,7 @@ export default function Home() {
       setPreviewUrl(URL.createObjectURL(selectedFile));
       setOutputUrl(null);
       setError(null);
+      initializeCropDimensions(selectedFile);
     }
   };
 
@@ -52,6 +71,7 @@ export default function Home() {
         setPreviewUrl(URL.createObjectURL(droppedFile));
         setOutputUrl(null);
         setError(null);
+        initializeCropDimensions(droppedFile);
       } else {
         setError('Only image files are supported.');
       }
@@ -89,6 +109,13 @@ export default function Home() {
       formData.append('background', background);
     }
 
+    if (enableCrop) {
+      formData.append('cropX', cropX.toString());
+      formData.append('cropY', cropY.toString());
+      formData.append('cropWidth', cropWidth.toString());
+      formData.append('cropHeight', cropHeight.toString());
+    }
+
     try {
       const response = await fetch('/api/process', {
         method: 'POST',
@@ -119,7 +146,6 @@ export default function Home() {
       <header>
         <div className="logo-container">
           <h1 className="logo-text">chimera.</h1>
-          <span className="logo-badge">Local Engine</span>
         </div>
         <p className="tagline">
           An industrial, stateless background-removal & format-conversion system.
@@ -252,8 +278,77 @@ export default function Home() {
               )}
             </div>
 
-            <button 
-              type="submit" 
+            {/* Cropping Options Panel */}
+            <div style={{ marginTop: '2rem', paddingTop: '1.5rem', borderTop: '1px solid var(--border-color)', pointerEvents: file ? 'auto' : 'none' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.5rem' }}>
+                <input 
+                  type="checkbox" 
+                  id="enableCrop" 
+                  checked={enableCrop} 
+                  onChange={(e) => setEnableCrop(e.target.checked)} 
+                  disabled={processing || !file}
+                  style={{ width: '1.1rem', height: '1.1rem', cursor: 'pointer', accentColor: 'var(--text-primary)' }}
+                />
+                <label htmlFor="enableCrop" style={{ fontFamily: 'var(--font-mono)', fontSize: '0.88rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', cursor: 'pointer' }}>
+                  Enable Image Extraction (Crop)
+                </label>
+              </div>
+
+              {enableCrop && (
+                <div className="options-grid" style={{ gap: '1.5rem' }}>
+                  <div className="form-group">
+                    <label htmlFor="cropX">Crop Left Offset (X - px)</label>
+                    <input 
+                      type="number" 
+                      id="cropX" 
+                      className="input-control" 
+                      value={cropX} 
+                      onChange={(e) => setCropX(Math.max(0, parseInt(e.target.value, 10) || 0))}
+                      disabled={processing}
+                      min="0"
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label htmlFor="cropY">Crop Top Offset (Y - px)</label>
+                    <input 
+                      type="number" 
+                      id="cropY" 
+                      className="input-control" 
+                      value={cropY} 
+                      onChange={(e) => setCropY(Math.max(0, parseInt(e.target.value, 10) || 0))}
+                      disabled={processing}
+                      min="0"
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label htmlFor="cropWidth">Crop Width (px)</label>
+                    <input 
+                      type="number" 
+                      id="cropWidth" 
+                      className="input-control" 
+                      value={cropWidth} 
+                      onChange={(e) => setCropWidth(Math.max(1, parseInt(e.target.value, 10) || 1))}
+                      disabled={processing}
+                      min="1"
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label htmlFor="cropHeight">Crop Height (px)</label>
+                    <input 
+                      type="number" 
+                      id="cropHeight" 
+                      className="input-control" 
+                      value={cropHeight} 
+                      onChange={(e) => setCropHeight(Math.max(1, parseInt(e.target.value, 10) || 1))}
+                      disabled={processing}
+                      min="1"
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <button               type="submit" 
               className="btn btn-primary" 
               disabled={processing || !file}
               style={{ marginTop: '2rem' }}
@@ -385,7 +480,11 @@ export default function Home() {
   -F "image=@photo.jpg" \\
   -F "operation=convert-and-remove-background" \\
   -F "format=png" \\
-  -F "background=white"`}
+  -F "background=white" \\
+  -F "cropX=0" \\
+  -F "cropY=0" \\
+  -F "cropWidth=800" \\
+  -F "cropHeight=600"`}
               </pre>
             </div>
           </div>
