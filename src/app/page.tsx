@@ -118,62 +118,75 @@ export default function Home() {
     <div className="container">
       <header>
         <div className="logo-container">
-          <h1 className="logo-text">CHIMERA</h1>
-          <span className="logo-badge">LOCAL AI</span>
+          <h1 className="logo-text">chimera.</h1>
+          <span className="logo-badge">Local Engine</span>
         </div>
         <p className="tagline">
-          Stateless, self-hosted image conversion & AI background-removal bot and HTTP API.
-          Zero external API dependencies.
+          An industrial, stateless background-removal & format-conversion system.
+          Driven entirely by local ONNX model segmentation and Sharp buffers.
         </p>
       </header>
 
-      <div className="main-grid">
-        {/* Left Side: Upload and Config */}
-        <section className="card">
-          <h2 className="card-title">📷 Upload Image</h2>
-          <form onSubmit={handleSubmit}>
-            {/* Drop Zone */}
-            {!previewUrl ? (
-              <div 
-                className={`dropzone ${dragActive ? 'active' : ''}`}
-                onDragEnter={handleDrag}
-                onDragOver={handleDrag}
-                onDragLeave={handleDrag}
-                onDrop={handleDrop}
-                onClick={() => fileInputRef.current?.click()}
-              >
-                <div className="dropzone-icon">📥</div>
-                <p className="dropzone-text">Drag and drop your image here, or <strong>browse</strong></p>
-                <p className="dropzone-hint">Supports JPEG, PNG, WebP, AVIF, GIF, BMP, TIFF up to 20MB</p>
-                <input 
-                  type="file" 
-                  ref={fileInputRef} 
-                  onChange={handleFileChange} 
-                  accept="image/*" 
-                  style={{ display: 'none' }} 
-                />
-              </div>
-            ) : (
-              <div className="preview-container">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={previewUrl} alt="Preview" className="preview-image" />
-                <div className="preview-details">
-                  <span>{file?.name} ({(file!.size / 1024 / 1024).toFixed(2)} MB)</span>
-                  <button type="button" onClick={removeFile} className="remove-preview-btn">Remove</button>
-                </div>
-              </div>
-            )}
+      <div className="step-container">
+        {/* Step 1: Upload */}
+        <section className="step-block">
+          <div className="step-number">01</div>
+          <div className="step-header">
+            <h2 className="step-title">Source Image</h2>
+            <p className="step-description">Provide the input image you wish to segment or convert.</p>
+          </div>
 
-            {/* Config Fields */}
-            <div style={{ marginTop: '2rem' }}>
+          {!previewUrl ? (
+            <div 
+              className={`dropzone ${dragActive ? 'active' : ''}`}
+              onDragEnter={handleDrag}
+              onDragOver={handleDrag}
+              onDragLeave={handleDrag}
+              onDrop={handleDrop}
+              onClick={() => fileInputRef.current?.click()}
+            >
+              <div className="dropzone-icon">🗂️</div>
+              <p className="dropzone-text">Drag files here or click to browse raw directories</p>
+              <p className="dropzone-hint">Limits: Max 20MB. Formats: JPEG, PNG, WebP, AVIF, BMP, TIFF</p>
+              <input 
+                type="file" 
+                ref={fileInputRef} 
+                onChange={handleFileChange} 
+                accept="image/*" 
+                style={{ display: 'none' }} 
+              />
+            </div>
+          ) : (
+            <div className="preview-container">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={previewUrl} alt="Preview" className="preview-image" />
+              <div className="preview-details">
+                <span>FILE: {file?.name}</span>
+                <span>SIZE: {(file!.size / 1024 / 1024).toFixed(2)} MB</span>
+                <button type="button" onClick={removeFile} className="remove-preview-btn">REMOVE FILE</button>
+              </div>
+            </div>
+          )}
+        </section>
+
+        {/* Step 2: Configuration */}
+        <section className="step-block" style={{ opacity: file ? 1 : 0.45, transition: 'opacity 0.2s ease' }}>
+          <div className="step-number">02</div>
+          <div className="step-header">
+            <h2 className="step-title">Configuration Parameters</h2>
+            <p className="step-description">Select output specifications and run execution.</p>
+          </div>
+
+          <form onSubmit={handleSubmit}>
+            <div className="options-grid" style={{ pointerEvents: file ? 'auto' : 'none' }}>
               <div className="form-group">
-                <label htmlFor="operation">Operation</label>
+                <label htmlFor="operation">Image Operation</label>
                 <select 
                   id="operation"
                   className="select-control"
                   value={operation}
                   onChange={(e) => setOperation(e.target.value as OperationType)}
-                  disabled={processing}
+                  disabled={processing || !file}
                 >
                   <option value="convert-and-remove-background">Convert + Remove Background</option>
                   <option value="remove-background">Remove Background Only</option>
@@ -181,7 +194,6 @@ export default function Home() {
                 </select>
               </div>
 
-              {/* Background Color selector for background removal */}
               {(operation === 'remove-background' || operation === 'convert-and-remove-background') && (
                 <div className="form-group">
                   <label htmlFor="background">Background Fill</label>
@@ -190,39 +202,38 @@ export default function Home() {
                     className="select-control"
                     value={background}
                     onChange={(e) => setBackground(e.target.value)}
-                    disabled={processing}
+                    disabled={processing || !file}
                   >
-                    <option value="transparent">Transparent (PNG alpha)</option>
-                    <option value="white">Solid White</option>
-                    <option value="black">Solid Black</option>
-                    <option value="#ff0000">Solid Red</option>
-                    <option value="#00ff00">Solid Green</option>
-                    <option value="#0000ff">Solid Blue</option>
+                    <option value="transparent">Transparent alpha channel (PNG/WebP/AVIF)</option>
+                    <option value="white">Solid White (#FFFFFF)</option>
+                    <option value="black">Solid Black (#000000)</option>
+                    <option value="#ff0000">Chroma Red (#FF0000)</option>
+                    <option value="#00ff00">Chroma Green (#00FF00)</option>
+                    <option value="#0000ff">Chroma Blue (#0000FF)</option>
                   </select>
                 </div>
               )}
 
-              {/* Format and Quality for convert operations */}
               {(operation === 'convert' || operation === 'convert-and-remove-background') && (
                 <>
                   <div className="form-group">
-                    <label htmlFor="format">Target Format</label>
+                    <label htmlFor="format">Output Format</label>
                     <select 
                       id="format"
                       className="select-control"
                       value={format}
                       onChange={(e) => setFormat(e.target.value)}
-                      disabled={processing}
+                      disabled={processing || !file}
                     >
-                      <option value="webp">WebP (Recommended)</option>
-                      <option value="png">PNG</option>
-                      <option value="jpeg">JPEG</option>
-                      <option value="avif">AVIF</option>
+                      <option value="webp">WebP (Optimized Lossy/Lossless)</option>
+                      <option value="png">PNG (Lossless Alpha)</option>
+                      <option value="jpeg">JPEG (Compressed Solid)</option>
+                      <option value="avif">AVIF (Ultra High Compression)</option>
                     </select>
                   </div>
 
                   <div className="form-group">
-                    <label htmlFor="quality">Compression Quality</label>
+                    <label htmlFor="quality">Target Quality Factor</label>
                     <div className="slider-container">
                       <input 
                         id="quality"
@@ -232,51 +243,53 @@ export default function Home() {
                         value={quality}
                         onChange={(e) => setQuality(parseInt(e.target.value, 10))}
                         className="slider-control"
-                        disabled={processing}
+                        disabled={processing || !file}
                       />
                       <span className="slider-val">{quality}%</span>
                     </div>
                   </div>
                 </>
               )}
-
-              <button 
-                type="submit" 
-                className="btn btn-primary" 
-                disabled={processing || !file}
-                style={{ marginTop: '1rem' }}
-              >
-                {processing ? (
-                  <>
-                    <span className="loader"></span>
-                    <span>Processing with AI...</span>
-                  </>
-                ) : (
-                  <span>✨ Process Image</span>
-                )}
-              </button>
             </div>
+
+            <button 
+              type="submit" 
+              className="btn btn-primary" 
+              disabled={processing || !file}
+              style={{ marginTop: '2rem' }}
+            >
+              {processing ? (
+                <>
+                  <span className="loader"></span>
+                  <span>EXECUTING SEGMENTATION RUN...</span>
+                </>
+              ) : (
+                <span>RUN PIPELINE</span>
+              )}
+            </button>
           </form>
         </section>
 
-        {/* Right Side: Result Output (with loading scrim overlay) */}
-        <section className="card" style={{ position: 'relative', minHeight: '400px' }}>
-          <h2 className="card-title">🎯 Processed Output</h2>
-          
-          {/* Tactile Material Scrim Overlay */}
+        {/* Step 3: Result Output */}
+        <section className="step-block" style={{ opacity: outputUrl || processing ? 1 : 0.45, transition: 'opacity 0.2s ease', minHeight: '300px' }}>
+          <div className="step-number">03</div>
+          <div className="step-header">
+            <h2 className="step-title">Processing Output</h2>
+            <p className="step-description">Examine segmented results and download output buffers.</p>
+          </div>
+
           {processing && (
             <div className="scrim-overlay">
               <span className="loader"></span>
-              <p style={{ fontWeight: '700', letterSpacing: '-0.02rem', color: '#fff', fontSize: '1.15rem' }}>Executing Segmentation Inference...</p>
-              <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', maxWidth: '240px', textAlign: 'center', lineHeight: '1.4' }}>
-                Quantized RMBG-1.4 runs in 3-5 seconds on serverless CPU.
+              <p style={{ fontFamily: 'var(--font-mono)', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                [inference] loading RMBG-1.4 weights onto CPU runtime...
               </p>
             </div>
           )}
-          
+
           {error && (
-            <div style={{ color: 'var(--error)', backgroundColor: 'rgba(239, 68, 68, 0.08)', padding: '1rem 1.25rem', borderRadius: '10px', border: '1px solid rgba(239, 68, 68, 0.2)', marginBottom: '1.5rem', fontSize: '0.95rem' }}>
-              <strong>Error:</strong> {error}
+            <div style={{ color: 'var(--error)', backgroundColor: 'rgba(239, 68, 68, 0.04)', padding: '1rem', border: '1px solid var(--error)', marginBottom: '1.5rem', fontFamily: 'var(--font-mono)', fontSize: '0.85rem' }}>
+              ERR: {error}
             </div>
           )}
 
@@ -286,41 +299,42 @@ export default function Home() {
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={outputUrl} alt="Output" className="preview-image" />
                 <div className="preview-details">
-                  <span>Size: {outputSize}</span>
-                  <a href={outputUrl} download={`chimera_${Date.now()}.${format}`} style={{ color: 'var(--accent-primary)', textDecoration: 'none', fontWeight: '700' }}>
-                    Download Image 📥
+                  <span>OUT SIZE: {outputSize}</span>
+                  <a href={outputUrl} download={`chimera_${Date.now()}.${format}`} style={{ color: 'var(--text-primary)', textDecoration: 'underline', fontWeight: '700' }}>
+                    DOWNLOAD ATTACHMENT
                   </a>
                 </div>
               </div>
               <div className="success-banner">
-                🚀 Background successfully removed locally using BRIA RMBG-1.4!
+                SUCCESS: Image operations finalized state-free. Mask compiled locally using BRIA RMBG-1.4.
               </div>
             </div>
           ) : (
-            <div style={{ border: '2px dashed rgba(255, 255, 255, 0.08)', borderRadius: '12px', height: '300px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)', textAlign: 'center', padding: '1.5rem' }}>
-              <span style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>📤</span>
-              <span style={{ fontSize: '0.95rem', fontWeight: '500' }}>Upload your image and click "Process Image" to initiate AI segmentation.</span>
-            </div>
+            !processing && (
+              <div style={{ border: '1px dashed var(--border-color)', height: '200px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', textAlign: 'center', fontSize: '0.88rem', fontFamily: 'var(--font-mono)' }}>
+                <span>[AWAITING STEP 02 PIPELINE RUN]</span>
+              </div>
+            )
           )}
         </section>
       </div>
 
       {/* Developer API & Architecture Docs */}
       <section className="dev-section">
-        <h2 className="dev-title">🛠️ Developer Resources</h2>
+        <h2 className="dev-title">developer resources.</h2>
         
         <div className="tabs-header">
           <button 
             className={`tab-btn ${activeTab === 'api' ? 'active' : ''}`}
             onClick={() => setActiveTab('api')}
           >
-            HTTP API
+            REST API
           </button>
           <button 
             className={`tab-btn ${activeTab === 'telegram' ? 'active' : ''}`}
             onClick={() => setActiveTab('telegram')}
           >
-            Telegram Bot
+            Telegram Integration
           </button>
           <button 
             className={`tab-btn ${activeTab === 'arch' ? 'active' : ''}`}
@@ -332,21 +346,21 @@ export default function Home() {
 
         {/* Tab 1: HTTP API */}
         <div className={`tab-content ${activeTab === 'api' ? 'active' : ''}`}>
-          <h3 style={{ marginBottom: '1rem', letterSpacing: '-0.02em' }}>REST API Endpoints</h3>
-          <p style={{ color: 'var(--text-secondary)', marginBottom: '1.5rem' }}>
-            Chimera exposes fully stateless POST endpoints for integration in other services.
+          <h3 style={{ marginBottom: '1rem', fontFamily: 'var(--font-mono)', fontSize: '1rem', textTransform: 'uppercase' }}>REST Endpoints</h3>
+          <p style={{ color: 'var(--text-secondary)', marginBottom: '1.5rem', fontSize: '0.9rem' }}>
+            Fully stateless microservice entrypoints. Supports standard multi-part payload uploads.
           </p>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1.75rem' }}>
             <div>
-              <h4 style={{ color: 'var(--accent-primary)', marginBottom: '0.5rem', fontWeight: '600' }}>1. Service Health: <code>GET /api/health</code></h4>
+              <h4 style={{ color: 'var(--text-primary)', marginBottom: '0.5rem', fontFamily: 'var(--font-mono)', fontSize: '0.9rem' }}>GET /api/health</h4>
               <pre>
 {`curl -X GET https://chimerraa.vercel.app/api/health`}
               </pre>
             </div>
 
             <div>
-              <h4 style={{ color: 'var(--accent-primary)', marginBottom: '0.5rem', fontWeight: '600' }}>2. Convert Format: <code>POST /api/convert</code></h4>
+              <h4 style={{ color: 'var(--text-primary)', marginBottom: '0.5rem', fontFamily: 'var(--font-mono)', fontSize: '0.9rem' }}>POST /api/convert</h4>
               <pre>
 {`curl -X POST https://chimerraa.vercel.app/api/convert \\
   -F "image=@photo.jpg" \\
@@ -356,7 +370,7 @@ export default function Home() {
             </div>
 
             <div>
-              <h4 style={{ color: 'var(--accent-primary)', marginBottom: '0.5rem', fontWeight: '600' }}>3. Remove Background: <code>POST /api/remove-background</code></h4>
+              <h4 style={{ color: 'var(--text-primary)', marginBottom: '0.5rem', fontFamily: 'var(--font-mono)', fontSize: '0.9rem' }}>POST /api/remove-background</h4>
               <pre>
 {`curl -X POST https://chimerraa.vercel.app/api/remove-background \\
   -F "image=@photo.jpg" \\
@@ -365,7 +379,7 @@ export default function Home() {
             </div>
 
             <div>
-              <h4 style={{ color: 'var(--accent-primary)', marginBottom: '0.5rem', fontWeight: '600' }}>4. Combined Processing: <code>POST /api/process</code></h4>
+              <h4 style={{ color: 'var(--text-primary)', marginBottom: '0.5rem', fontFamily: 'var(--font-mono)', fontSize: '0.9rem' }}>POST /api/process</h4>
               <pre>
 {`curl -X POST https://chimerraa.vercel.app/api/process \\
   -F "image=@photo.jpg" \\
@@ -379,58 +393,37 @@ export default function Home() {
 
         {/* Tab 2: Telegram Bot */}
         <div className={`tab-content ${activeTab === 'telegram' ? 'active' : ''}`}>
-          <h3 style={{ marginBottom: '1rem', letterSpacing: '-0.02em' }}>Telegram Webhook Setup</h3>
-          <p style={{ color: 'var(--text-secondary)', marginBottom: '1rem' }}>
-            The bot processes images via webhook triggers in production.
+          <h3 style={{ marginBottom: '1rem', fontFamily: 'var(--font-mono)', fontSize: '1rem', textTransform: 'uppercase' }}>Webhook Setup</h3>
+          <p style={{ color: 'var(--text-secondary)', marginBottom: '1rem', fontSize: '0.9rem' }}>
+            Telegram message streams bind dynamically. Run the following to configure standard webhook routing:
           </p>
-          <ol style={{ marginLeft: '1.5rem', color: 'var(--text-secondary)', display: 'flex', flexDirection: 'column', gap: '0.75rem', marginBottom: '2rem' }}>
-            <li>
-              Create a bot by messaging <a href="https://t.me/BotFather" target="_blank" rel="noreferrer" style={{ color: 'var(--accent-primary)', fontWeight: '600' }}>@BotFather</a> on Telegram to obtain your <code>TELEGRAM_BOT_TOKEN</code>.
-            </li>
-            <li>
-              Deploy this project to Vercel and retrieve your production domain.
-            </li>
-            <li>
-              Set up the webhook by making a POST/GET request to Telegram (replace variables):
-              <pre style={{ marginTop: '0.5rem' }}>
+          <pre>
 {`curl -X POST "https://api.telegram.org/bot<TELEGRAM_BOT_TOKEN>/setWebhook" \\
   -H "Content-Type: application/json" \\
   -d '{"url": "https://chimerraa.vercel.app/api/telegram/webhook", "secret_token": "<TELEGRAM_WEBHOOK_SECRET>"}'`}
-              </pre>
-            </li>
-          </ol>
-
-          <h4 style={{ marginBottom: '0.5rem', fontWeight: '600' }}>Bot Commands & Interface</h4>
-          <ul style={{ marginLeft: '1.5rem', color: 'var(--text-secondary)', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-            <li><code>/start</code>: Greets the user and lists capability details.</li>
-            <li><strong>Send Image/File</strong>: Returns an interactive inline keyboard menu to trigger actions.</li>
-          </ul>
+          </pre>
         </div>
 
         {/* Tab 3: Architecture */}
         <div className={`tab-content ${activeTab === 'arch' ? 'active' : ''}`}>
-          <h3 style={{ marginBottom: '1rem', letterSpacing: '-0.02em' }}>Stateless AI Infrastructure</h3>
-          <p style={{ color: 'var(--text-secondary)', marginBottom: '1.5rem' }}>
-            Chimera is built to run fully state-free. AI inference is performed serverless at runtime.
+          <h3 style={{ marginBottom: '1rem', fontFamily: 'var(--font-mono)', fontSize: '1rem', textTransform: 'uppercase' }}>State-free Infrastructure</h3>
+          <p style={{ color: 'var(--text-secondary)', marginBottom: '1.5rem', fontSize: '0.9rem' }}>
+            Inference engine pipeline and network nodes:
           </p>
 
           <div className="arch-flow">
-            <div className="flow-step">📱 Telegram User / API Client</div>
-            <div className="flow-arrow">⬇️ HTTP POST (Image Upload)</div>
-            <div className="flow-step">⚡ Vercel Serverless Function</div>
-            <div className="flow-arrow">⬇️ Rate limit & Magic Byte check</div>
-            <div className="flow-step">🔬 Sharp (Image decode & resize)</div>
-            <div className="flow-arrow">⬇️ Load RMBG-1.4 model into ONNX</div>
-            <div className="flow-step">🧠 Local AI inference (Generates mask)</div>
-            <div className="flow-arrow">⬇️ Alpha Compositing via Sharp</div>
-            <div className="flow-step">📦 Output PNG/WebP Buffer return</div>
+            <div className="flow-step">[client] sends multi-part image payload</div>
+            <div className="flow-arrow">↓</div>
+            <div className="flow-step">[gateway] validates file boundaries & limits</div>
+            <div className="flow-arrow">↓</div>
+            <div className="flow-step">[decoder] Sharp parses headers & unpacks pixel channels</div>
+            <div className="flow-arrow">↓</div>
+            <div className="flow-step">[onnx runtime] performs local BRIA RMBG-1.4 segmentation</div>
+            <div className="flow-arrow">↓</div>
+            <div className="flow-step">[compositor] composites background and encodes target format</div>
+            <div className="flow-arrow">↓</div>
+            <div className="flow-step">[client] receives binary output buffer</div>
           </div>
-
-          <h4 style={{ marginTop: '1.5rem', marginBottom: '0.5rem', fontWeight: '600' }}>Core Attributes</h4>
-          <ul style={{ marginLeft: '1.5rem', color: 'var(--text-secondary)', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-            <li><strong>EPHEMERAL RUNTIME</strong>: Uses local server memory and the <code>/tmp</code> scratch folder. Warm instances cache the loaded ONNX model, leading to fast subsequent inference.</li>
-            <li><strong>ISOLATED INTERFACES</strong>: Image processing is decoupled from the controller layer in <code>src/services/imageProcessor.ts</code>. You can easily migrate the AI engine to a dedicated VM/Worker without changing your API or Telegram handlers.</li>
-          </ul>
         </div>
       </section>
     </div>
