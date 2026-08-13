@@ -18,6 +18,8 @@ export default function Home() {
   const [cropY, setCropY] = useState<number>(0);
   const [cropWidth, setCropWidth] = useState<number>(100);
   const [cropHeight, setCropHeight] = useState<number>(100);
+  const [naturalWidth, setNaturalWidth] = useState<number>(0);
+  const [naturalHeight, setNaturalHeight] = useState<number>(0);
 
   const [processing, setProcessing] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
@@ -31,6 +33,8 @@ export default function Home() {
   const initializeCropDimensions = (selectedFile: File) => {
     const img = new Image();
     img.onload = () => {
+      setNaturalWidth(img.naturalWidth);
+      setNaturalHeight(img.naturalHeight);
       setCropWidth(img.naturalWidth);
       setCropHeight(img.naturalHeight);
       setCropX(0);
@@ -183,9 +187,36 @@ export default function Home() {
               />
             </div>
           ) : (
-            <div className="preview-container">
+            <div className="preview-container" style={{ position: 'relative', width: '100%' }}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={previewUrl} alt="Preview" className="preview-image" />
+              <img 
+                src={previewUrl} 
+                alt="Preview" 
+                className="preview-image" 
+                style={{ width: '100%', height: 'auto', display: 'block' }}
+              />
+              {enableCrop && naturalWidth > 0 && naturalHeight > 0 && (
+                <div style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  pointerEvents: 'none',
+                  overflow: 'hidden'
+                }}>
+                  <div style={{
+                    position: 'absolute',
+                    border: '1.5px dashed #fafafa',
+                    boxShadow: '0 0 0 9999px rgba(9, 9, 11, 0.75)',
+                    left: `${(cropX / naturalWidth) * 100}%`,
+                    top: `${(cropY / naturalHeight) * 100}%`,
+                    width: `${(cropWidth / naturalWidth) * 100}%`,
+                    height: `${(cropHeight / naturalHeight) * 100}%`,
+                    boxSizing: 'border-box'
+                  }} />
+                </div>
+              )}
               <div className="preview-details">
                 <span>FILE: {file?.name}</span>
                 <span>SIZE: {(file!.size / 1024 / 1024).toFixed(2)} MB</span>
@@ -303,9 +334,16 @@ export default function Home() {
                       id="cropX" 
                       className="input-control" 
                       value={cropX} 
-                      onChange={(e) => setCropX(Math.max(0, parseInt(e.target.value, 10) || 0))}
+                      onChange={(e) => {
+                        const val = Math.min(Math.max(0, naturalWidth - 1), Math.max(0, parseInt(e.target.value, 10) || 0));
+                        setCropX(val);
+                        if (val + cropWidth > naturalWidth) {
+                          setCropWidth(naturalWidth - val);
+                        }
+                      }}
                       disabled={processing}
                       min="0"
+                      max={Math.max(0, naturalWidth - 1)}
                     />
                   </div>
                   <div className="form-group">
@@ -315,9 +353,16 @@ export default function Home() {
                       id="cropY" 
                       className="input-control" 
                       value={cropY} 
-                      onChange={(e) => setCropY(Math.max(0, parseInt(e.target.value, 10) || 0))}
+                      onChange={(e) => {
+                        const val = Math.min(Math.max(0, naturalHeight - 1), Math.max(0, parseInt(e.target.value, 10) || 0));
+                        setCropY(val);
+                        if (val + cropHeight > naturalHeight) {
+                          setCropHeight(naturalHeight - val);
+                        }
+                      }}
                       disabled={processing}
                       min="0"
+                      max={Math.max(0, naturalHeight - 1)}
                     />
                   </div>
                   <div className="form-group">
@@ -327,9 +372,14 @@ export default function Home() {
                       id="cropWidth" 
                       className="input-control" 
                       value={cropWidth} 
-                      onChange={(e) => setCropWidth(Math.max(1, parseInt(e.target.value, 10) || 1))}
+                      onChange={(e) => {
+                        const maxW = Math.max(1, naturalWidth - cropX);
+                        const val = Math.min(maxW, Math.max(1, parseInt(e.target.value, 10) || 1));
+                        setCropWidth(val);
+                      }}
                       disabled={processing}
                       min="1"
+                      max={Math.max(1, naturalWidth - cropX)}
                     />
                   </div>
                   <div className="form-group">
@@ -339,9 +389,14 @@ export default function Home() {
                       id="cropHeight" 
                       className="input-control" 
                       value={cropHeight} 
-                      onChange={(e) => setCropHeight(Math.max(1, parseInt(e.target.value, 10) || 1))}
+                      onChange={(e) => {
+                        const maxH = Math.max(1, naturalHeight - cropY);
+                        const val = Math.min(maxH, Math.max(1, parseInt(e.target.value, 10) || 1));
+                        setCropHeight(val);
+                      }}
                       disabled={processing}
                       min="1"
+                      max={Math.max(1, naturalHeight - cropY)}
                     />
                   </div>
                 </div>
