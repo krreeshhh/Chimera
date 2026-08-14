@@ -1126,20 +1126,8 @@ code {
   line-height: 0.8;
 }
 
-.wordmark-text-warp {
-  width: 100%;
-  height: calc(clamp(3rem, 14.5vw, 11rem) * 0.46);
-  overflow: hidden;
-  display: inline-block;
-  transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
 .oversized-wordmark:hover .wordmark-text {
   color: rgba(255, 255, 255, 0.09);
-  transform: scale(1.01);
-}
-
-.oversized-wordmark:hover .wordmark-text-warp {
   transform: scale(1.01);
 }
 

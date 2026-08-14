@@ -3,7 +3,6 @@
 import React, { useState, useRef } from 'react';
 import SpecularButton from './SpecularButton';
 import MoltenMetal from './MoltenMetal';
-import WarpText from './WarpText';
 
 type OperationType = 'convert' | 'remove-background' | 'convert-and-remove-background';
 
@@ -846,25 +845,7 @@ export default function Home() {
         <div className="footer-bottom">
           <div className="oversized-wordmark-container">
             <h1 className="oversized-wordmark">
-              <div className="wordmark-text-warp">
-                <WarpText
-                  text="CHIMERA"
-                  color="rgba(255, 255, 255, 0.05)"
-                  warpStrength={0.06}
-                  warpScale={1.5}
-                  speed={0.4}
-                  pointerInfluence={0.35}
-                  pointerStrength={0.35}
-                  refraction={0.015}
-                  ripple
-                  fontSize="clamp(3rem, 14.5vw, 11rem)"
-                  fontWeight={800}
-                  letterSpacing="-0.04em"
-                  fontFamily="inherit"
-                  style={{ height: 'clamp(3rem, 14.5vw, 11rem)', width: '100%' }}
-                />
-              </div>
-              <span className="footer-copyright-badge">©</span>
+              <span className="wordmark-text">CHIMERA</span>
             </h1>
           </div>
         </div>
