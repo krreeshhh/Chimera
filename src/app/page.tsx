@@ -3,10 +3,13 @@
 import React, { useState, useRef } from 'react';
 import SpecularButton from './SpecularButton';
 import MoltenMetal from './MoltenMetal';
+import LineSidebar from './LineSidebar';
+import MagicBento from './MagicBento';
 
 type OperationType = 'convert' | 'remove-background' | 'convert-and-remove-background';
 
 export default function Home() {
+  const [activeShowcase, setActiveShowcase] = useState<number>(1);
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [operation, setOperation] = useState<OperationType>('convert');
@@ -333,36 +336,61 @@ export default function Home() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem', flexGrow: 1 }}>
           <div className="form-group">
             <label htmlFor="operation">Operation</label>
-            <select 
-              id="operation"
-              className="select-control"
-              value={operation}
-              onChange={(e) => setOperation(e.target.value as OperationType)}
-              disabled={processing || !file}
-            >
-              <option value="convert">Convert Format</option>
-              <option value="remove-background">Remove Background</option>
-              <option value="convert-and-remove-background">Convert + Remove BG</option>
-            </select>
+            <div style={{ opacity: (!file || processing) ? 0.5 : 1, pointerEvents: (!file || processing) ? 'none' : 'auto', transition: 'opacity 0.2s ease', marginTop: '0.5rem' }}>
+              <LineSidebar
+                items={['Convert Format', 'Remove Background', 'Convert + Remove BG']}
+                accentColor="#c084fc"
+                textColor="rgba(255, 255, 255, 0.6)"
+                markerColor="rgba(255, 255, 255, 0.2)"
+                showIndex={true}
+                showMarker={true}
+                proximityRadius={60}
+                maxShift={12}
+                falloff="smooth"
+                markerLength={24}
+                markerGap={8}
+                tickScale={0.5}
+                scaleTick={true}
+                itemGap={12}
+                fontSize={0.88}
+                smoothing={100}
+                defaultActive={['convert', 'remove-background', 'convert-and-remove-background'].indexOf(operation)}
+                onItemClick={(index) => {
+                  const operations: OperationType[] = ['convert', 'remove-background', 'convert-and-remove-background'];
+                  setOperation(operations[index]);
+                }}
+              />
+            </div>
           </div>
 
           {(operation === 'remove-background' || operation === 'convert-and-remove-background') && (
             <div className="form-group">
               <label htmlFor="background">Background</label>
-              <select 
-                id="background"
-                className="select-control"
-                value={background}
-                onChange={(e) => setBackground(e.target.value)}
-                disabled={processing || !file}
-              >
-                <option value="transparent">Transparent alpha</option>
-                <option value="white">Solid White</option>
-                <option value="black">Solid Black</option>
-                <option value="#ff0000">Chroma Red</option>
-                <option value="#00ff00">Chroma Green</option>
-                <option value="#0000ff">Chroma Blue</option>
-              </select>
+              <div style={{ opacity: (!file || processing) ? 0.5 : 1, pointerEvents: (!file || processing) ? 'none' : 'auto', transition: 'opacity 0.2s ease', marginTop: '0.5rem' }}>
+                <LineSidebar
+                  items={['Transparent alpha', 'Solid White', 'Solid Black', 'Chroma Red', 'Chroma Green', 'Chroma Blue']}
+                  accentColor="#c084fc"
+                  textColor="rgba(255, 255, 255, 0.6)"
+                  markerColor="rgba(255, 255, 255, 0.2)"
+                  showIndex={true}
+                  showMarker={true}
+                  proximityRadius={60}
+                  maxShift={12}
+                  falloff="smooth"
+                  markerLength={24}
+                  markerGap={8}
+                  tickScale={0.5}
+                  scaleTick={true}
+                  itemGap={12}
+                  fontSize={0.88}
+                  smoothing={100}
+                  defaultActive={['transparent', 'white', 'black', '#ff0000', '#00ff00', '#0000ff'].indexOf(background)}
+                  onItemClick={(index) => {
+                    const backgrounds = ['transparent', 'white', 'black', '#ff0000', '#00ff00', '#0000ff'];
+                    setBackground(backgrounds[index]);
+                  }}
+                />
+              </div>
             </div>
           )}
 
@@ -370,18 +398,31 @@ export default function Home() {
             <>
               <div className="form-group">
                 <label htmlFor="format">Format</label>
-                <select 
-                  id="format"
-                  className="select-control"
-                  value={format}
-                  onChange={(e) => setFormat(e.target.value)}
-                  disabled={processing || !file}
-                >
-                  <option value="webp">WebP (Compressed)</option>
-                  <option value="png">PNG (Lossless)</option>
-                  <option value="jpeg">JPEG (Solid)</option>
-                  <option value="avif">AVIF (Ultra)</option>
-                </select>
+                <div style={{ opacity: (!file || processing) ? 0.5 : 1, pointerEvents: (!file || processing) ? 'none' : 'auto', transition: 'opacity 0.2s ease', marginTop: '0.5rem' }}>
+                  <LineSidebar
+                    items={['WebP (Compressed)', 'PNG (Lossless)', 'JPEG (Solid)', 'AVIF (Ultra)']}
+                    accentColor="#c084fc"
+                    textColor="rgba(255, 255, 255, 0.6)"
+                    markerColor="rgba(255, 255, 255, 0.2)"
+                    showIndex={true}
+                    showMarker={true}
+                    proximityRadius={60}
+                    maxShift={12}
+                    falloff="smooth"
+                    markerLength={24}
+                    markerGap={8}
+                    tickScale={0.5}
+                    scaleTick={true}
+                    itemGap={12}
+                    fontSize={0.88}
+                    smoothing={100}
+                    defaultActive={['webp', 'png', 'jpeg', 'avif'].indexOf(format)}
+                    onItemClick={(index) => {
+                      const formats = ['webp', 'png', 'jpeg', 'avif'];
+                      setFormat(formats[index]);
+                    }}
+                  />
+                </div>
               </div>
 
               <div className="form-group">
@@ -741,60 +782,20 @@ export default function Home() {
         </section>
       </div>
 
-      {/* Ephemeral Platform Policy & Dev Resources */}
-      <section className="info-sections-container">
-        <details className="info-details-item" id="stateless">
-          <summary className="info-summary-title">Stateless Guarantee</summary>
-          <div className="info-content-body">
-            <p>
-              Chimera is engineered to be fully stateless. When you upload an image for format conversion, cropping, or background removal, it is processed ephemerally in server memory and returned directly to your browser.
-            </p>
-            <p>
-              We do not persist files, retain logs of image metadata, or maintain database storage. Your data remains yours alone.
-            </p>
-          </div>
-        </details>
-
-        <details className="info-details-item" id="privacy">
-          <summary className="info-summary-title">Privacy Policy</summary>
-          <div className="info-content-body">
-            <p>
-              <strong>Secure Transit:</strong> All communications and files sent to our API endpoints are encrypted in transit using standard HTTPS protocol.
-            </p>
-            <p>
-              <strong>No Telemetry:</strong> We do not deploy tracking scripts, third-party analytics cookies, or behavioral advertising tracking tools on this platform.
-            </p>
-            <p>
-              <strong>Zero Log Retention:</strong> Server logs are configured strictly for performance tuning and monitoring, logging response status codes rather than request parameters or image payloads.
-            </p>
-          </div>
-        </details>
-
-        <details className="info-details-item" id="developer">
-          <summary className="info-summary-title">Developer REST API</summary>
-          <div className="info-content-body">
-            <p>
-              Integrate Chimera into your own automated workflows, scripts, or apps using our clean, authenticated JSON API endpoints.
-            </p>
-            <div className="api-code-block">
-              <strong>Format Conversion & Processing:</strong>
-              <pre>
-{`curl -X POST https://chimera.sh/api/process \\
-  -F "file=@image.png" \\
-  -F "format=webp" \\
-  -F "operation=convert"`}
-              </pre>
-            </div>
-            <div className="api-code-block" style={{ marginTop: '1rem' }}>
-              <strong>Background Removal:</strong>
-              <pre>
-{`curl -X POST https://chimera.sh/api/process \\
-  -F "file=@image.jpg" \\
-  -F "operation=remove-background"`}
-              </pre>
-            </div>
-          </div>
-        </details>
+      {/* Ephemeral Platform Policy & Dev Resources - MagicBento Grid */}
+      <section style={{ width: '100%', maxWidth: '1200px', margin: '4.5rem auto 1.5rem auto', padding: '0 1rem' }}>
+        <MagicBento 
+          textAutoHide={false}
+          enableStars={true}
+          enableSpotlight={true}
+          enableBorderGlow={true}
+          enableTilt={true}
+          enableMagnetism={true}
+          clickEffect={true}
+          spotlightRadius={360}
+          particleCount={10}
+          glowColor="192, 132, 252"
+        />
       </section>
 
       <div className="footer-separator" />
@@ -819,24 +820,10 @@ export default function Home() {
 
           <div className="footer-links-grid">
             <div className="footer-link-col">
-              <h4>USEFUL</h4>
-              <ul>
-                <li><a href="#workbench">Workbench</a></li>
-                <li><a href="https://t.me/ChimeraImageBot" target="_blank" rel="noreferrer">Telegram Bot</a></li>
-              </ul>
-            </div>
-            <div className="footer-link-col">
-              <h4>LEGAL</h4>
-              <ul>
-                <li><a href="#privacy">Privacy Policy</a></li>
-                <li><a href="#stateless">Stateless Guarantee</a></li>
-              </ul>
-            </div>
-            <div className="footer-link-col">
               <h4>DEVELOPER</h4>
               <ul>
                 <li><a href="https://github.com/krreeshhh/Chimera" target="_blank" rel="noreferrer">GitHub</a></li>
-                <li><a href="#developer">REST API</a></li>
+                <li><a href="https://t.me/ChimeraImageBot" target="_blank" rel="noreferrer">Telegram Bot</a></li>
               </ul>
             </div>
           </div>
