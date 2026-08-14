@@ -2,6 +2,7 @@
 
 import React, { useState, useRef } from 'react';
 import SpecularButton from './SpecularButton';
+import MoltenMetal from './MoltenMetal';
 
 type OperationType = 'convert' | 'remove-background' | 'convert-and-remove-background';
 
@@ -284,6 +285,30 @@ export default function Home() {
 
   return (
     <div className="container">
+      {/* Ambient WebGL Liquid Metal Flow */}
+      <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', zIndex: -1, pointerEvents: 'none', opacity: 0.38 }}>
+        <MoltenMetal
+          color1="#09090b"
+          color2="#4f46e5"
+          color3="#c084fc"
+          speed={0.18}
+          scale={3.2}
+          detail={4}
+          glow={2.2}
+          coreSize={0.09}
+          swirl={1.0}
+          fold={-0.15}
+          blackPoint={0.05}
+          brightness={1.4}
+          colorMode="molten"
+          grain={true}
+          grainIntensity={0.04}
+          mouseInteraction={true}
+          mouseStrength={0.25}
+          opacity={1.0}
+        />
+      </div>
+
       {/* Settings Sidebar Backdrop */}
       <div 
         className={`sidebar-backdrop ${showSettings ? 'active' : ''}`}
@@ -716,6 +741,63 @@ export default function Home() {
         </section>
       </div>
 
+      {/* Ephemeral Platform Policy & Dev Resources */}
+      <section className="info-sections-container">
+        <details className="info-details-item" id="stateless">
+          <summary className="info-summary-title">Stateless Guarantee</summary>
+          <div className="info-content-body">
+            <p>
+              Chimera is engineered to be fully stateless. When you upload an image for format conversion, cropping, or background removal, it is processed ephemerally in server memory and returned directly to your browser.
+            </p>
+            <p>
+              We do not persist files, retain logs of image metadata, or maintain database storage. Your data remains yours alone.
+            </p>
+          </div>
+        </details>
+
+        <details className="info-details-item" id="privacy">
+          <summary className="info-summary-title">Privacy Policy</summary>
+          <div className="info-content-body">
+            <p>
+              <strong>Secure Transit:</strong> All communications and files sent to our API endpoints are encrypted in transit using standard HTTPS protocol.
+            </p>
+            <p>
+              <strong>No Telemetry:</strong> We do not deploy tracking scripts, third-party analytics cookies, or behavioral advertising tracking tools on this platform.
+            </p>
+            <p>
+              <strong>Zero Log Retention:</strong> Server logs are configured strictly for performance tuning and monitoring, logging response status codes rather than request parameters or image payloads.
+            </p>
+          </div>
+        </details>
+
+        <details className="info-details-item" id="developer">
+          <summary className="info-summary-title">Developer REST API</summary>
+          <div className="info-content-body">
+            <p>
+              Integrate Chimera into your own automated workflows, scripts, or apps using our clean, authenticated JSON API endpoints.
+            </p>
+            <div className="api-code-block">
+              <strong>Format Conversion & Processing:</strong>
+              <pre>
+{`curl -X POST https://chimera.sh/api/process \\
+  -F "file=@image.png" \\
+  -F "format=webp" \\
+  -F "operation=convert"`}
+              </pre>
+            </div>
+            <div className="api-code-block" style={{ marginTop: '1rem' }}>
+              <strong>Background Removal:</strong>
+              <pre>
+{`curl -X POST https://chimera.sh/api/process \\
+  -F "file=@image.jpg" \\
+  -F "operation=remove-background"`}
+              </pre>
+            </div>
+          </div>
+        </details>
+      </section>
+
+      <div className="footer-separator" />
       <footer className="cosmos-footer">
         <div className="footer-top">
           <div className="footer-tagline-section">
