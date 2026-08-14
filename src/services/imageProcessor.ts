@@ -33,9 +33,9 @@ export async function validateImage(buffer: Buffer): Promise<ImageValidationResu
     }
 
     const format = metadata.format;
-    const allowedFormats = ['jpeg', 'jpg', 'png', 'webp', 'avif', 'tiff', 'gif', 'heif'];
+    const allowedFormats = ['jpeg', 'jpg', 'png', 'webp', 'avif'];
     if (!format || !allowedFormats.includes(format)) {
-      return { valid: false, error: `Unsupported image format: ${format || 'unknown'}` };
+      return { valid: false, error: `Unsupported image format: ${format || 'unknown'}. Only PNG, JPG, WebP, and AVIF are supported.` };
     }
 
     // Configurable pixel limit, default 4MP
@@ -64,7 +64,7 @@ export async function convertImage(
   format: 'jpeg' | 'jpg' | 'png' | 'webp' | 'avif',
   quality = 85
 ): Promise<Buffer> {
-  let pipelineInstance = sharp(buffer);
+  let pipelineInstance = sharp(buffer).rotate();
   const fmt = format === 'jpg' ? 'jpeg' : format;
 
   switch (fmt) {
@@ -94,9 +94,12 @@ export async function removeBackground(
   buffer: Buffer,
   backgroundColor: 'transparent' | 'white' | 'black' | string = 'transparent'
 ): Promise<Buffer> {
+  // Auto-rotate/orient the image to respect EXIF orientation metadata
+  const orientedBuffer = await sharp(buffer).rotate().toBuffer();
+
   // 1. Decode original image using Sharp to get raw pixel data
   // RMBG models work best with RGB, so we convert to 3-channel RGB first
-  const { data, info } = await sharp(buffer)
+  const { data, info } = await sharp(orientedBuffer)
     .removeAlpha()
     .raw()
     .toBuffer({ resolveWithObject: true });
@@ -114,16 +117,20 @@ export async function removeBackground(
   // 4. Retrieve mask bytes
   const maskBuffer = Buffer.from(mask.data);
 
-  // 5. Apply the mask back to the original image using Sharp
-  let processed = sharp(buffer)
-    .ensureAlpha()
-    .joinChannel(maskBuffer, {
-      raw: {
-        width: mask.width,
-        height: mask.height,
-        channels: 1
-      }
-    });
+  // 5. Apply the mask back to the raw 3-channel RGB pixels to produce a 4-channel RGBA output
+  let processed = sharp(data, {
+    raw: {
+      width: info.width,
+      height: info.height,
+      channels: 3
+    }
+  }).joinChannel(maskBuffer, {
+    raw: {
+      width: mask.width,
+      height: mask.height,
+      channels: 1
+    }
+  });
 
   // 6. If background color is not transparent, flatten onto a solid color background
   if (backgroundColor !== 'transparent') {
@@ -149,7 +156,7 @@ export async function removeBackground(
     }
     
     // Flatten background to render transparent pixels as solid color
-    processed = sharp(await processed.toBuffer())
+    processed = sharp(await processed.png().toBuffer())
       .flatten({ background: flatColor });
   }
 
@@ -177,7 +184,8 @@ export async function processImage(
     crop?: CropOptions;
   }
 ): Promise<Buffer> {
-  let outputBuffer = buffer;
+  // First, auto-rotate/orient the image to ensure crop coordinates align with the preview
+  let outputBuffer = await sharp(buffer).rotate().toBuffer();
 
   // Apply crop extraction first if specified
   if (options.crop) {

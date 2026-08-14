@@ -34,6 +34,7 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
   const [outputUrl, setOutputUrl] = useState<string | null>(null);
   const [outputSize, setOutputSize] = useState<string>('');
+  const [outputFilename, setOutputFilename] = useState<string>('');
   const [activeTab, setActiveTab] = useState<string>('api');
   const [activeEndpoint, setActiveEndpoint] = useState<string>('process');
   
@@ -112,13 +113,39 @@ export default function Home() {
     }
   };
 
+  const validateUploadedFile = (selectedFile: File): boolean => {
+    const maxSize = 20 * 1024 * 1024;
+    if (selectedFile.size > maxSize) {
+      setError('File size exceeds the 20MB limit.');
+      return false;
+    }
+
+    const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp', 'image/avif'];
+    const allowedExtensions = ['.png', '.jpg', '.jpeg', '.webp', '.avif'];
+    const fileNameLower = selectedFile.name.toLowerCase();
+    const hasAllowedExtension = allowedExtensions.some(ext => fileNameLower.endsWith(ext));
+
+    if (!allowedTypes.includes(selectedFile.type) && !hasAllowedExtension) {
+      setError('Unsupported file type. Only PNG, JPG, WebP, and AVIF are supported.');
+      return false;
+    }
+
+    return true;
+  };
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const selectedFile = e.target.files[0];
+      setError(null);
+      if (!validateUploadedFile(selectedFile)) {
+        if (fileInputRef.current) {
+          fileInputRef.current.value = '';
+        }
+        return;
+      }
       setFile(selectedFile);
       setPreviewUrl(URL.createObjectURL(selectedFile));
       setOutputUrl(null);
-      setError(null);
       initializeCropDimensions(selectedFile);
     }
   };
@@ -139,15 +166,14 @@ export default function Home() {
     setDragActive(false);
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
       const droppedFile = e.dataTransfer.files[0];
-      if (droppedFile.type.startsWith('image/')) {
-        setFile(droppedFile);
-        setPreviewUrl(URL.createObjectURL(droppedFile));
-        setOutputUrl(null);
-        setError(null);
-        initializeCropDimensions(droppedFile);
-      } else {
-        setError('Only image files are supported.');
+      setError(null);
+      if (!validateUploadedFile(droppedFile)) {
+        return;
       }
+      setFile(droppedFile);
+      setPreviewUrl(URL.createObjectURL(droppedFile));
+      setOutputUrl(null);
+      initializeCropDimensions(droppedFile);
     }
   };
 
@@ -227,6 +253,27 @@ export default function Home() {
       
       const sizeKb = (blob.size / 1024).toFixed(1);
       setOutputSize(`${sizeKb} KB`);
+
+      const contentDisposition = response.headers.get('content-disposition');
+      let filename = '';
+      if (contentDisposition) {
+        const filenameMatch = contentDisposition.match(/filename="?([^";\n]+)"?/);
+        if (filenameMatch) {
+          filename = filenameMatch[1];
+        }
+      }
+      if (!filename) {
+        let ext = 'png';
+        if (operation === 'convert' || operation === 'convert-and-remove-background') {
+          ext = format === 'jpeg' ? 'jpg' : format;
+        }
+        const suffix = operation === 'convert' ? '-converted' : '-processed';
+        const originalName = file.name || 'image';
+        const lastDotIndex = originalName.lastIndexOf('.');
+        const baseName = lastDotIndex !== -1 ? originalName.substring(0, lastDotIndex) : originalName;
+        filename = `${baseName}${suffix}.${ext}`;
+      }
+      setOutputFilename(filename);
     } catch (err: any) {
       console.error(err);
       setError(err.message || 'An error occurred during image processing.');
@@ -247,7 +294,7 @@ export default function Home() {
       <aside className={`sidebar ${showSettings ? 'active' : ''}`}>
         <div className="sidebar-header">
           <h3 style={{ fontFamily: 'var(--font-mono)', fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-            ⚙️ System parameters
+            ⚙️ Settings
           </h3>
           <button 
             type="button" 
@@ -260,7 +307,7 @@ export default function Home() {
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem', flexGrow: 1 }}>
           <div className="form-group">
-            <label htmlFor="operation">Image Operation</label>
+            <label htmlFor="operation">Operation</label>
             <select 
               id="operation"
               className="select-control"
@@ -276,7 +323,7 @@ export default function Home() {
 
           {(operation === 'remove-background' || operation === 'convert-and-remove-background') && (
             <div className="form-group">
-              <label htmlFor="background">Background Fill</label>
+              <label htmlFor="background">Background</label>
               <select 
                 id="background"
                 className="select-control"
@@ -297,7 +344,7 @@ export default function Home() {
           {(operation === 'convert' || operation === 'convert-and-remove-background') && (
             <>
               <div className="form-group">
-                <label htmlFor="format">Output Format</label>
+                <label htmlFor="format">Format</label>
                 <select 
                   id="format"
                   className="select-control"
@@ -313,7 +360,7 @@ export default function Home() {
               </div>
 
               <div className="form-group">
-                <label htmlFor="quality">Quality Factor</label>
+                <label htmlFor="quality">Quality</label>
                 <div className="slider-container">
                   <input 
                     id="quality"
@@ -342,7 +389,7 @@ export default function Home() {
                 style={{ width: '1.1rem', height: '1.1rem', cursor: 'pointer', accentColor: 'var(--text-primary)' }}
               />
               <label htmlFor="enableCrop" style={{ fontFamily: 'var(--font-mono)', fontSize: '0.82rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', cursor: 'pointer' }}>
-                Enable Extraction (Crop)
+                Crop Image
               </label>
             </div>
 
@@ -350,7 +397,7 @@ export default function Home() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                   <div className="form-group">
-                    <label htmlFor="cropX">Left Offset (X)</label>
+                    <label htmlFor="cropX">X Offset</label>
                     <input 
                       type="number" 
                       id="cropX" 
@@ -369,7 +416,7 @@ export default function Home() {
                     />
                   </div>
                   <div className="form-group">
-                    <label htmlFor="cropY">Top Offset (Y)</label>
+                    <label htmlFor="cropY">Y Offset</label>
                     <input 
                       type="number" 
                       id="cropY" 
@@ -390,7 +437,7 @@ export default function Home() {
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                   <div className="form-group">
-                    <label htmlFor="cropWidth">Width (px)</label>
+                    <label htmlFor="cropWidth">Width</label>
                     <input 
                       type="number" 
                       id="cropWidth" 
@@ -407,7 +454,7 @@ export default function Home() {
                     />
                   </div>
                   <div className="form-group">
-                    <label htmlFor="cropHeight">Height (px)</label>
+                    <label htmlFor="cropHeight">Height</label>
                     <input 
                       type="number" 
                       id="cropHeight" 
@@ -452,15 +499,14 @@ export default function Home() {
           <h1 className="logo-text">chimera.</h1>
         </div>
         <p className="tagline">
-          An industrial, stateless background-removal & format-conversion system.
-          Driven entirely by local ONNX model segmentation and Sharp buffers.
+          Easily remove image backgrounds and convert formats. Fast, private, and runs entirely in your browser.
         </p>
       </header>
 
       {/* Main Action Bar */}
       <div className="toolbar-container">
-        <h2 style={{ fontFamily: 'var(--font-mono)', fontSize: '0.85rem', textTransform: 'uppercase', color: 'var(--text-secondary)', letterSpacing: '0.05em' }}>
-          Interactive Workbench
+        <h2 style={{ fontFamily: 'var(--font-serif)', fontStyle: 'italic', fontSize: '1.35rem', fontWeight: '700' }}>
+         Workbench
         </h2>
         {file && (
           <div style={{ display: 'flex', gap: '1rem' }}>
@@ -505,8 +551,8 @@ export default function Home() {
         <section className="step-block">
           <div className="step-number">01</div>
           <div className="step-header">
-            <h2 className="step-title">Source Preview</h2>
-            <p className="step-description">Upload image and drag overlays to extract regions of interest.</p>
+            <h2 className="step-title">Upload Image</h2>
+            <p className="step-description">Select an image to process.</p>
           </div>
 
           {!previewUrl ? (
@@ -518,9 +564,25 @@ export default function Home() {
               onDrop={handleDrop}
               onClick={() => fileInputRef.current?.click()}
             >
-              <div className="dropzone-icon">🗂️</div>
-              <p className="dropzone-text">Drag files here or click to browse directories</p>
-              <p className="dropzone-hint">Limits: Max 20MB. Formats: JPEG, PNG, WebP, AVIF, BMP, TIFF</p>
+              <div className="dropzone-icon">
+                <svg 
+                  xmlns="http://www.w3.org/2000/svg" 
+                  width="40" 
+                  height="40" 
+                  viewBox="0 0 24 24" 
+                  fill="none" 
+                  stroke="currentColor" 
+                  strokeWidth="1.5" 
+                  strokeLinecap="round" 
+                  strokeLinejoin="round"
+                >
+                  <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                  <circle cx="9" cy="9" r="2"/>
+                  <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/>
+                </svg>
+              </div>
+              <p className="dropzone-text">Drag an image here or click to upload</p>
+              <p className="dropzone-hint">Max size: 20MB. Supports: PNG, JPG, WebP, AVIF</p>
               <input 
                 type="file" 
                 ref={fileInputRef} 
@@ -610,15 +672,15 @@ export default function Home() {
         <section className="step-block" style={{ opacity: outputUrl || processing ? 1 : 0.45, transition: 'opacity 0.2s ease', minHeight: '300px' }}>
           <div className="step-number">02</div>
           <div className="step-header">
-            <h2 className="step-title">Processing Output</h2>
-            <p className="step-description">Examine segmented results and download output buffers.</p>
+            <h2 className="step-title">Result</h2>
+            <p className="step-description">Download your processed image below.</p>
           </div>
 
           {processing && (
             <div className="scrim-overlay">
               <span className="loader"></span>
               <p style={{ fontFamily: 'var(--font-mono)', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-                [inference] running local segmenter model on CPU ...
+                Processing image...
               </p>
             </div>
           )}
@@ -638,7 +700,7 @@ export default function Home() {
                 </div>
                 <div className="preview-details">
                   <span>OUT SIZE: {outputSize}</span>
-                  <a href={outputUrl} download={`chimera_${Date.now()}.${format}`} style={{ color: 'var(--text-primary)', textDecoration: 'underline', fontWeight: '700' }}>
+                  <a href={outputUrl} download={outputFilename} style={{ color: 'var(--text-primary)', textDecoration: 'underline', fontWeight: '700' }}>
                     DOWNLOAD ATTACHMENT
                   </a>
                 </div>
@@ -654,341 +716,58 @@ export default function Home() {
         </section>
       </div>
 
-      {/* Developer API & Architecture Docs */}
-      <section className="dev-section">
-        <h2 className="dev-title">developer resources.</h2>
-        
-        <div className="tabs-header">
-          <button 
-            className={`tab-btn ${activeTab === 'api' ? 'active' : ''}`}
-            onClick={() => setActiveTab('api')}
-          >
-            REST API
-          </button>
-          <button 
-            className={`tab-btn ${activeTab === 'telegram' ? 'active' : ''}`}
-            onClick={() => setActiveTab('telegram')}
-          >
-            Telegram Integration
-          </button>
-          <button 
-            className={`tab-btn ${activeTab === 'arch' ? 'active' : ''}`}
-            onClick={() => setActiveTab('arch')}
-          >
-            Architecture
-          </button>
-        </div>
-
-        {/* Tab 1: HTTP API */}
-        <div className={`tab-content ${activeTab === 'api' ? 'active' : ''}`}>
-          <div className="dev-grid">
-            <div className="endpoint-list">
-              <button 
-                type="button" 
-                className={`endpoint-item ${activeEndpoint === 'process' ? 'active' : ''}`}
-                onClick={() => setActiveEndpoint('process')}
-              >
-                <span className="method-badge post">POST</span> /api/process
-              </button>
-              <button 
-                type="button" 
-                className={`endpoint-item ${activeEndpoint === 'convert' ? 'active' : ''}`}
-                onClick={() => setActiveEndpoint('convert')}
-              >
-                <span className="method-badge post">POST</span> /api/convert
-              </button>
-              <button 
-                type="button" 
-                className={`endpoint-item ${activeEndpoint === 'remove-bg' ? 'active' : ''}`}
-                onClick={() => setActiveEndpoint('remove-bg')}
-              >
-                <span className="method-badge post">POST</span> /api/remove-bg
-              </button>
-              <button 
-                type="button" 
-                className={`endpoint-item ${activeEndpoint === 'health' ? 'active' : ''}`}
-                onClick={() => setActiveEndpoint('health')}
-              >
-                <span className="method-badge get">GET</span> /api/health
-              </button>
+      <footer className="cosmos-footer">
+        <div className="footer-top">
+          <div className="footer-tagline-section">
+            <div className="rotating-dots">
+              <span className="dot"></span>
+              <span className="dot"></span>
+              <span className="dot"></span>
+              <span className="dot"></span>
+              <span className="dot"></span>
+              <span className="dot"></span>
+              <span className="dot"></span>
+              <span className="dot"></span>
             </div>
+            <p className="footer-tagline">
+              Chimera is the stateless image editor<br />
+              you&apos;ve been searching for.
+            </p>
+          </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              {activeEndpoint === 'process' && (
-                <>
-                  <h3 style={{ fontFamily: 'var(--font-mono)', fontSize: '1rem', textTransform: 'uppercase' }}>Unified Processing Pipeline</h3>
-                  <p style={{ color: 'var(--text-secondary)', fontSize: '0.88rem' }}>
-                    Stateless multi-operation gateway. Combines visual cropping, local AI segmentation, background overlay fill, and format conversion in a single network pass.
-                  </p>
-                  
-                  <div className="params-table-container">
-                    <table className="params-table">
-                      <thead>
-                        <tr>
-                          <th>Parameter</th>
-                          <th>Type</th>
-                          <th>Requirement</th>
-                          <th>Description</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        <tr>
-                          <td className="param-name">image</td>
-                          <td className="param-type">File (binary)</td>
-                          <td><span className="param-req">required</span></td>
-                          <td>Target image to process. Maximum file size: 20MB.</td>
-                        </tr>
-                        <tr>
-                          <td className="param-name">operation</td>
-                          <td className="param-type">String</td>
-                          <td><span className="param-req">required</span></td>
-                          <td><code>convert</code> | <code>remove-background</code> | <code>convert-and-remove-background</code></td>
-                        </tr>
-                        <tr>
-                          <td className="param-name">format</td>
-                          <td className="param-type">String</td>
-                          <td><span className="param-opt">optional</span></td>
-                          <td>Output format: <code>webp</code> | <code>png</code> | <code>jpeg</code> | <code>avif</code>. Required if converting.</td>
-                        </tr>
-                        <tr>
-                          <td className="param-name">background</td>
-                          <td className="param-type">String</td>
-                          <td><span className="param-opt">optional</span></td>
-                          <td>Background fill options: <code>transparent</code> | <code>white</code> | <code>black</code> | Hex code color.</td>
-                        </tr>
-                        <tr>
-                          <td className="param-name">cropX / cropY</td>
-                          <td className="param-type">Number</td>
-                          <td><span className="param-opt">optional</span></td>
-                          <td>Pixel coordinates for top-left crop offset start.</td>
-                        </tr>
-                        <tr>
-                          <td className="param-name">cropWidth / cropHeight</td>
-                          <td className="param-type">Number</td>
-                          <td><span className="param-opt">optional</span></td>
-                          <td>Dimensions in pixels for region extraction bounds.</td>
-                        </tr>
-                      </tbody>
-                    </table>
-                  </div>
-
-                  <h4 style={{ fontFamily: 'var(--font-mono)', fontSize: '0.85rem', textTransform: 'uppercase', color: 'var(--text-secondary)' }}>Example Curl Request</h4>
-                  <pre>
-{`curl -X POST https://chimerraa.vercel.app/api/process \\
-  -F "image=@photo.jpg" \\
-  -F "operation=convert-and-remove-background" \\
-  -F "format=png" \\
-  -F "background=white" \\
-  -F "cropX=0" \\
-  -F "cropY=0" \\
-  -F "cropWidth=800" \\
-  -F "cropHeight=600"`}
-                  </pre>
-                </>
-              )}
-
-              {activeEndpoint === 'convert' && (
-                <>
-                  <h3 style={{ fontFamily: 'var(--font-mono)', fontSize: '1rem', textTransform: 'uppercase' }}>Convert Image Format</h3>
-                  <p style={{ color: 'var(--text-secondary)', fontSize: '0.88rem' }}>
-                    Re-encodes image buffer to target compressed formats without performing pixel layer segmentation.
-                  </p>
-
-                  <div className="params-table-container">
-                    <table className="params-table">
-                      <thead>
-                        <tr>
-                          <th>Parameter</th>
-                          <th>Type</th>
-                          <th>Requirement</th>
-                          <th>Description</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        <tr>
-                          <td className="param-name">image</td>
-                          <td className="param-type">File (binary)</td>
-                          <td><span className="param-req">required</span></td>
-                          <td>Target image to convert. Maximum file size: 20MB.</td>
-                        </tr>
-                        <tr>
-                          <td className="param-name">format</td>
-                          <td className="param-type">String</td>
-                          <td><span className="param-req">required</span></td>
-                          <td>Target output format: <code>webp</code> | <code>png</code> | <code>jpeg</code> | <code>avif</code>.</td>
-                        </tr>
-                        <tr>
-                          <td className="param-name">quality</td>
-                          <td className="param-type">Number</td>
-                          <td><span className="param-opt">optional</span></td>
-                          <td>Quality parameter factor: value from 1 to 100 (defaults to 85).</td>
-                        </tr>
-                      </tbody>
-                    </table>
-                  </div>
-
-                  <h4 style={{ fontFamily: 'var(--font-mono)', fontSize: '0.85rem', textTransform: 'uppercase', color: 'var(--text-secondary)' }}>Example Curl Request</h4>
-                  <pre>
-{`curl -X POST https://chimerraa.vercel.app/api/convert \\
-  -F "image=@photo.jpg" \\
-  -F "format=webp" \\
-  -F "quality=85"`}
-                  </pre>
-                </>
-              )}
-
-              {activeEndpoint === 'remove-bg' && (
-                <>
-                  <h3 style={{ fontFamily: 'var(--font-mono)', fontSize: '1rem', textTransform: 'uppercase' }}>Remove Background Only</h3>
-                  <p style={{ color: 'var(--text-secondary)', fontSize: '0.88rem' }}>
-                    Executes BRIA RMBG-1.4 image segmentation mask on the source buffer. Retains original format while altering the background transparency.
-                  </p>
-
-                  <div className="params-table-container">
-                    <table className="params-table">
-                      <thead>
-                        <tr>
-                          <th>Parameter</th>
-                          <th>Type</th>
-                          <th>Requirement</th>
-                          <th>Description</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        <tr>
-                          <td className="param-name">image</td>
-                          <td className="param-type">File (binary)</td>
-                          <td><span className="param-req">required</span></td>
-                          <td>Target image to process. Maximum file size: 20MB.</td>
-                        </tr>
-                        <tr>
-                          <td className="param-name">background</td>
-                          <td className="param-type">String</td>
-                          <td><span className="param-opt">optional</span></td>
-                          <td>Solid fill background: <code>transparent</code> | <code>white</code> | <code>black</code> | hex values (defaults to <code>transparent</code>).</td>
-                        </tr>
-                      </tbody>
-                    </table>
-                  </div>
-
-                  <h4 style={{ fontFamily: 'var(--font-mono)', fontSize: '0.85rem', textTransform: 'uppercase', color: 'var(--text-secondary)' }}>Example Curl Request</h4>
-                  <pre>
-{`curl -X POST https://chimerraa.vercel.app/api/remove-background \\
-  -F "image=@photo.jpg" \\
-  -F "background=transparent"`}
-                  </pre>
-                </>
-              )}
-
-              {activeEndpoint === 'health' && (
-                <>
-                  <h3 style={{ fontFamily: 'var(--font-mono)', fontSize: '1rem', textTransform: 'uppercase' }}>Health Probe</h3>
-                  <p style={{ color: 'var(--text-secondary)', fontSize: '0.88rem' }}>
-                    Stateless endpoint to verify service availability and infrastructure nodes routing state.
-                  </p>
-
-                  <h4 style={{ fontFamily: 'var(--font-mono)', fontSize: '0.85rem', textTransform: 'uppercase', color: 'var(--text-secondary)' }}>Example Curl Request</h4>
-                  <pre>
-{`curl -X GET https://chimerraa.vercel.app/api/health`}
-                  </pre>
-
-                  <h4 style={{ fontFamily: 'var(--font-mono)', fontSize: '0.85rem', textTransform: 'uppercase', color: 'var(--text-secondary)', marginTop: '0.5rem' }}>Response Payload (200 OK)</h4>
-                  <pre>
-{`{
-  "ok": true,
-  "service": "chimera"
-}`}
-                  </pre>
-                </>
-              )}
+          <div className="footer-links-grid">
+            <div className="footer-link-col">
+              <h4>USEFUL</h4>
+              <ul>
+                <li><a href="#workbench">Workbench</a></li>
+                <li><a href="https://t.me/ChimeraImageBot" target="_blank" rel="noreferrer">Telegram Bot</a></li>
+              </ul>
+            </div>
+            <div className="footer-link-col">
+              <h4>LEGAL</h4>
+              <ul>
+                <li><a href="#privacy">Privacy Policy</a></li>
+                <li><a href="#stateless">Stateless Guarantee</a></li>
+              </ul>
+            </div>
+            <div className="footer-link-col">
+              <h4>DEVELOPER</h4>
+              <ul>
+                <li><a href="https://github.com/krreeshhh/Chimera" target="_blank" rel="noreferrer">GitHub</a></li>
+                <li><a href="#developer">REST API</a></li>
+              </ul>
             </div>
           </div>
         </div>
 
-        {/* Tab 2: Telegram Bot */}
-        <div className={`tab-content ${activeTab === 'telegram' ? 'active' : ''}`}>
-          <h3 style={{ marginBottom: '1rem', fontFamily: 'var(--font-mono)', fontSize: '1rem', textTransform: 'uppercase' }}>Webhook Configuration</h3>
-          <p style={{ color: 'var(--text-secondary)', marginBottom: '1.5rem', fontSize: '0.88rem', lineHeight: '1.6' }}>
-            Bind Telegram message updates to the Chimera webhook handler. Send a POST request to register your Bot Token:
-          </p>
-          <pre>
-{`curl -X POST "https://api.telegram.org/bot<TELEGRAM_BOT_TOKEN>/setWebhook" \\
-  -H "Content-Type: application/json" \\
-  -d '{"url": "https://chimerraa.vercel.app/api/telegram/webhook", "secret_token": "<TELEGRAM_WEBHOOK_SECRET>"}'`}
-          </pre>
-
-          <h3 style={{ marginTop: '2.5rem', marginBottom: '1rem', fontFamily: 'var(--font-mono)', fontSize: '1rem', textTransform: 'uppercase' }}>Bot Commands</h3>
-          <div className="params-table-container">
-            <table className="params-table">
-              <thead>
-                <tr>
-                  <th>Command</th>
-                  <th>Arguments</th>
-                  <th>Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td className="param-name">/start</td>
-                  <td className="param-opt">none</td>
-                  <td>Initializes connection and prints system parameter guidelines.</td>
-                </tr>
-                <tr>
-                  <td className="param-name">/convert</td>
-                  <td className="param-type">format [webp | png | jpg | avif]</td>
-                  <td>Converts subsequent images to the specified format.</td>
-                </tr>
-                <tr>
-                  <td className="param-name">/removebg</td>
-                  <td className="param-type">bg [transparent | white | black]</td>
-                  <td>Segments the background on images sent afterwards.</td>
-                </tr>
-              </tbody>
-            </table>
+        <div className="footer-bottom">
+          <div className="oversized-wordmark-container">
+            <h1 className="oversized-wordmark">
+              <span className="wordmark-text">CHIMERA</span>
+            </h1>
           </div>
         </div>
-
-        {/* Tab 3: Architecture */}
-        <div className={`tab-content ${activeTab === 'arch' ? 'active' : ''}`}>
-          <h3 style={{ marginBottom: '0.5rem', fontFamily: 'var(--font-mono)', fontSize: '1rem', textTransform: 'uppercase' }}>Stateless Data Flow</h3>
-          <p style={{ color: 'var(--text-secondary)', marginBottom: '1.5rem', fontSize: '0.88rem' }}>
-            Chimera is an ephemeral processing node. No data is stored persistently.
-          </p>
-
-          <div className="arch-pipeline">
-            <div className="arch-node">
-              <span className="arch-node-num">STAGE 01</span>
-              <h4 className="arch-node-title">Payload Ingestion</h4>
-              <p className="arch-node-desc">Client POSTs form-data. Gateway extracts files, target operations, quality modifiers, and crop coordinates.</p>
-            </div>
-            <div className="arch-node">
-              <span className="arch-node-num">STAGE 02</span>
-              <h4 className="arch-node-title">Sanity Guarding</h4>
-              <p className="arch-node-desc">System validates magic bytes, bounds limits, rate checks, and enforces maximum pixel counts constraints.</p>
-            </div>
-            <div className="arch-node">
-              <span className="arch-node-num">STAGE 03</span>
-              <h4 className="arch-node-title">Sharp Decoding</h4>
-              <p className="arch-node-desc">The image header is parsed, decompression starts, and raw pixel color channels are loaded into server memory buffer.</p>
-            </div>
-            <div className="arch-node">
-              <span className="arch-node-num">STAGE 04</span>
-              <h4 className="arch-node-title">AI Segmentation</h4>
-              <p className="arch-node-desc">Local ONNX Runtime executes the BRIA RMBG-1.4 model on CPU, producing a high-resolution alpha mask.</p>
-            </div>
-            <div className="arch-node">
-              <span className="arch-node-num">STAGE 05</span>
-              <h4 className="arch-node-title">Compositing Layer</h4>
-              <p className="arch-node-desc">Sharp merges the alpha mask back, applies flat background fills, and crops extraction coordinates.</p>
-            </div>
-            <div className="arch-node">
-              <span className="arch-node-num">STAGE 06</span>
-              <h4 className="arch-node-title">Format Encoding</h4>
-              <p className="arch-node-desc">Composited pixels are compressed (WebP, PNG, JPEG, AVIF) and returned as a direct download stream.</p>
-            </div>
-          </div>
-        </div>
-      </section>
+      </footer>
     </div>
   );
 }
